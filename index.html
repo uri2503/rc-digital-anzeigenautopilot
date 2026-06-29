@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TeilePilot – KI-Assistent für Kleinanzeigen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#12151f;--surface:#1a1f2e;--surface2:#222840;--border:#2d3450;
+  --amber:#f59e0b;--amber-dim:#92600a;--amber-glow:#f59e0b22;
+  --text:#f0f2f8;--text-dim:#8b92b0;--green:#10b981;--red:#ef4444;
+  --radius:12px;--radius-sm:8px;
+}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:15px;line-height:1.6}
+
+/* HEADER */
+.header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;position:sticky;top:0;z-index:100}
+.header-inner{max-width:860px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:58px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px;letter-spacing:-.5px}
+.logo-icon{width:32px;height:32px;background:var(--amber);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:17px}
+.logo span{color:var(--amber)}
+
+/* CREDIT BADGE */
+.credit-badge{display:flex;align-items:center;gap:8px}
+.credit-display{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:5px 14px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px;cursor:pointer;transition:all .15s}
+.credit-display:hover{border-color:var(--amber);color:var(--amber)}
+.credit-num{color:var(--amber);font-size:15px}
+.credit-low{border-color:var(--red)!important}
+.credit-low .credit-num{color:var(--red)}
+.btn-topup{background:var(--amber);color:#000;border:none;border-radius:20px;padding:5px 14px;font-size:12px;font-weight:800;cursor:pointer;transition:all .15s}
+.btn-topup:hover{background:#fbbf24}
+
+/* TABS */
+.tabs{max-width:860px;margin:0 auto;padding:24px 20px 0;display:flex;gap:6px}
+.tab-btn{padding:10px 20px;border-radius:var(--radius-sm) var(--radius-sm) 0 0;border:1px solid var(--border);border-bottom:none;background:var(--surface);color:var(--text-dim);font-size:14px;font-weight:600;cursor:pointer;transition:all .18s;display:flex;align-items:center;gap:7px}
+.tab-btn:hover{color:var(--text);background:var(--surface2)}
+.tab-btn.active{background:var(--surface2);color:var(--amber);border-color:var(--border);border-bottom:2px solid var(--amber)}
+
+/* MAIN */
+.main{max-width:860px;margin:0 auto;padding:0 20px 60px}
+.tab-panel{display:none;background:var(--surface2);border:1px solid var(--border);border-radius:0 var(--radius) var(--radius) var(--radius);padding:28px}
+.tab-panel.active{display:block}
+
+/* TYPOGRAPHY */
+.section-title{font-size:13px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--amber);margin-bottom:12px}
+.section-sub{font-size:13px;color:var(--text-dim);margin-bottom:20px;margin-top:-8px}
+
+/* UPLOAD */
+.upload-zone{border:2px dashed var(--border);border-radius:var(--radius);padding:36px 20px;text-align:center;cursor:pointer;transition:all .2s;background:var(--bg);position:relative}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--amber);background:var(--amber-glow)}
+.upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.upload-icon{font-size:36px;margin-bottom:10px}
+.upload-text{font-size:14px;color:var(--text-dim)}
+.upload-text strong{color:var(--text)}
+.preview-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:10px;margin-top:16px}
+.preview-item{position:relative;border-radius:var(--radius-sm);overflow:hidden;aspect-ratio:1;background:var(--bg)}
+.preview-item img{width:100%;height:100%;object-fit:cover}
+.preview-remove{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.7);color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+
+/* INPUTS */
+.field{margin-bottom:16px}
+.field label{display:block;font-size:13px;font-weight:600;color:var(--text-dim);margin-bottom:6px}
+.field input,.field textarea,.field select{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:var(--radius-sm);font-size:14px;font-family:'Inter',sans-serif;transition:border .15s;resize:vertical}
+.field input:focus,.field textarea:focus,.field select:focus{outline:none;border-color:var(--amber)}
+.field select option{background:var(--surface)}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:8px;padding:11px 22px;border-radius:var(--radius-sm);font-size:14px;font-weight:700;cursor:pointer;border:none;transition:all .18s}
+.btn-primary{background:var(--amber);color:#000}
+.btn-primary:hover{background:#fbbf24;transform:translateY(-1px)}
+.btn-primary:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.btn-ghost{background:transparent;color:var(--text-dim);border:1px solid var(--border)}
+.btn-ghost:hover{color:var(--text);border-color:var(--text-dim)}
+.btn-copy{background:var(--surface);color:var(--text);border:1px solid var(--border);font-size:12px;padding:6px 14px}
+.btn-copy:hover{border-color:var(--amber);color:var(--amber)}
+.btn-copy.copied{color:var(--green);border-color:var(--green)}
+
+/* RESULT */
+.result-box{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-top:20px;display:none}
+.result-box.show{display:block}
+.result-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px}
+.result-label{font-size:12px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--text-dim)}
+.result-actions{display:flex;gap:8px;flex-wrap:wrap}
+.result-content{font-size:14px;line-height:1.75;color:var(--text);white-space:pre-wrap;word-break:break-word}
+
+/* CAT CHIP */
+.cat-chip{display:none;align-items:center;gap:6px;background:var(--amber-glow);border:1px solid var(--amber-dim);color:var(--amber);font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;margin:16px 0}
+.cat-chip.show{display:inline-flex}
+
+/* DIVIDER */
+.divider{border:none;border-top:1px solid var(--border);margin:24px 0}
+
+/* RULES */
+.rules-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:520px){.rules-grid{grid-template-columns:1fr}}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px}
+.toggle-label{font-size:13px;font-weight:500}
+.toggle-sub{font-size:11px;color:var(--text-dim);margin-top:2px}
+.toggle{position:relative;width:42px;height:24px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;inset:0;background:var(--border);border-radius:24px;cursor:pointer;transition:.2s}
+.toggle-slider::before{content:'';position:absolute;width:18px;height:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
+.toggle input:checked+.toggle-slider{background:var(--amber)}
+.toggle input:checked+.toggle-slider::before{transform:translateX(18px)}
+
+/* PLATFORM TABS */
+.plat-tabs{display:flex;gap:6px;margin-bottom:14px}
+.plat-tab{padding:5px 14px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:var(--bg);color:var(--text-dim);transition:all .15s}
+.plat-tab.active{background:var(--amber-glow);color:var(--amber);border-color:var(--amber-dim)}
+
+/* SPINNER */
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(245,158,11,.3);border-top-color:var(--amber);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* AUTOPILOT BADGE */
+.autopilot-badge{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;letter-spacing:.5px;color:var(--amber)}
+.autopilot-badge .dot{width:8px;height:8px;background:var(--amber);border-radius:50%;animation:pulse 1.8s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
+
+/* SAVE IND */
+.save-ind{font-size:11px;color:var(--green);opacity:0;transition:opacity .3s}
+.save-ind.show{opacity:1}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:500;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.show{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);max-width:480px;width:100%;padding:32px}
+.modal-title{font-size:20px;font-weight:800;margin-bottom:6px}
+.modal-sub{font-size:13px;color:var(--text-dim);margin-bottom:24px}
+.pakete{display:flex;flex-direction:column;gap:12px}
+.paket-card{background:var(--bg);border:2px solid var(--border);border-radius:var(--radius);padding:18px 20px;cursor:pointer;transition:all .18s;display:flex;align-items:center;justify-content:space-between}
+.paket-card:hover{border-color:var(--amber);background:var(--amber-glow)}
+.paket-card.featured{border-color:var(--amber-dim)}
+.paket-name{font-size:15px;font-weight:700}
+.paket-desc{font-size:12px;color:var(--text-dim);margin-top:2px}
+.paket-price{font-size:22px;font-weight:800;color:var(--amber)}
+.paket-badge{font-size:10px;font-weight:700;background:var(--amber);color:#000;padding:2px 8px;border-radius:10px;display:inline-block;margin-top:4px}
+.modal-close{margin-top:20px;text-align:center}
+.modal-close button{background:transparent;border:none;color:var(--text-dim);font-size:13px;cursor:pointer;padding:8px}
+.modal-close button:hover{color:var(--text)}
+
+/* ONBOARDING */
+.onboard-bar{background:var(--amber-glow);border:1px solid var(--amber-dim);border-radius:var(--radius-sm);padding:12px 16px;margin-bottom:20px;display:flex;align-items:center;gap:10px;font-size:13px}
+.onboard-bar.hide{display:none}
+
+@media(max-width:600px){.tab-panel{padding:18px}.tabs{padding:16px 12px 0}.main{padding:0 12px 60px}}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="header-inner">
+    <div class="logo">
+      <div class="logo-icon">✈</div>
+      Teile<span>Pilot</span>
+    </div>
+    <div class="credit-badge">
+      <div class="credit-display" id="creditDisplay" onclick="openModal()">
+        ⚡ <span class="credit-num" id="creditNum">–</span> Credits
+      </div>
+      <button class="btn-topup" onclick="openModal()">Aufladen</button>
+    </div>
+  </div>
+</header>
+
+<!-- TABS -->
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('inserat')">📝 Inserat-Generator</button>
+  <button class="tab-btn" onclick="switchTab('autopilot')">🤖 Antwort-Autopilot</button>
+  <button class="tab-btn" onclick="switchTab('settings')">⚙️ Einstellungen</button>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- ══ TAB 1: INSERAT ══ -->
+  <div class="tab-panel active" id="tab-inserat">
+
+    <div class="onboard-bar" id="onboardBar">
+      🎁 <span>Du hast <strong>10 Gratis-Credits</strong> zum Starten. 1 Credit = 1 Inserat oder 3 Antworten.</span>
+    </div>
+
+    <p class="section-title">Inserat erstellen</p>
+    <p class="section-sub">Foto hochladen → KI erkennt das Teil → fertiges Inserat in 30 Sekunden.</p>
+
+    <div class="upload-zone" id="uploadZone">
+      <input type="file" id="photoInput" accept="image/*" multiple>
+      <div class="upload-icon">📷</div>
+      <div class="upload-text"><strong>Fotos hier ablegen</strong> oder antippen<br>
+        <span style="font-size:12px;opacity:.6">JPG, PNG · bis zu 5 Fotos</span>
+      </div>
+    </div>
+    <div class="preview-grid" id="previewGrid"></div>
+
+    <hr class="divider">
+
+    <div class="field">
+      <label>Zustand / Hinweise <span style="font-weight:400;opacity:.6">(optional)</span></label>
+      <input type="text" id="conditionInput" placeholder="z.B. leichte Gebrauchsspuren, funktioniert einwandfrei …">
+    </div>
+    <div class="field">
+      <label>Wunschpreis € <span style="font-weight:400;opacity:.6">(leer = KI schlägt vor)</span></label>
+      <input type="number" id="priceInput" placeholder="0" min="0">
+    </div>
+
+    <div style="margin-bottom:20px">
+      <label style="font-size:13px;font-weight:600;color:var(--text-dim);display:block;margin-bottom:8px">Plattform</label>
+      <div class="plat-tabs">
+        <div class="plat-tab active" id="plat-ka" onclick="selectPlat('ka')">Kleinanzeigen</div>
+        <div class="plat-tab" id="plat-ebay" onclick="selectPlat('ebay')">eBay</div>
+        <div class="plat-tab" id="plat-both" onclick="selectPlat('both')">Beide</div>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" id="generateBtn" onclick="generateInserat()" disabled>
+      <span id="generateBtnIcon">✨</span> Inserat generieren <span style="opacity:.6;font-size:12px;font-weight:500">(1 Credit)</span>
+    </button>
+
+    <div class="cat-chip" id="catChip">🎯 <span id="catLabel"></span></div>
+
+    <div class="result-box" id="inseratResult">
+      <div class="result-header">
+        <span class="result-label">Fertiges Inserat</span>
+        <div class="result-actions">
+          <button class="btn btn-copy" id="copyTitleBtn" onclick="copySection('title')">Titel kopieren</button>
+          <button class="btn btn-copy" id="copyAllBtn" onclick="copySection('all')">Alles kopieren</button>
+        </div>
+      </div>
+      <div class="result-content" id="inseratText"></div>
+    </div>
+  </div>
+
+  <!-- ══ TAB 2: AUTOPILOT ══ -->
+  <div class="tab-panel" id="tab-autopilot">
+
+    <p class="section-title">Meine Verkäufer-Regeln <span class="save-ind" id="saveInd">● gespeichert</span></p>
+    <p class="section-sub">Einmal einstellen – wird für alle Antworten verwendet.</p>
+
+    <div class="rules-grid">
+      <div class="toggle-row">
+        <div><div class="toggle-label">Versand möglich</div><div class="toggle-sub">DHL / Hermes / DPD</div></div>
+        <label class="toggle"><input type="checkbox" id="ruleVersand" checked onchange="saveRules()"><span class="toggle-slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div><div class="toggle-label">Selbstabholung</div><div class="toggle-sub">Käufer kommt zu mir</div></div>
+        <label class="toggle"><input type="checkbox" id="ruleAbholung" checked onchange="saveRules()"><span class="toggle-slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div><div class="toggle-label">Preisverhandlung</div><div class="toggle-sub">Rabatte möglich</div></div>
+        <label class="toggle"><input type="checkbox" id="ruleVerhandlung" onchange="saveRules()"><span class="toggle-slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div><div class="toggle-label">Reservierung</div><div class="toggle-sub">Artikel reservierbar</div></div>
+        <label class="toggle"><input type="checkbox" id="ruleReservierung" onchange="saveRules()"><span class="toggle-slider"></span></label>
+      </div>
+    </div>
+
+    <div class="field" style="margin-top:16px">
+      <label>Maximaler Rabatt %</label>
+      <input type="number" id="ruleRabatt" placeholder="z.B. 10" min="0" max="50" onchange="saveRules()">
+    </div>
+    <div class="field">
+      <label>Mein Standort / Abholort</label>
+      <input type="text" id="ruleStandort" placeholder="z.B. Stuttgart, Wernau …" onchange="saveRules()">
+    </div>
+    <div class="field">
+      <label>Persönliche Anmerkung</label>
+      <textarea id="ruleAnmerkung" rows="2" placeholder="z.B. Privatverkauf, keine Garantie. Keine Tauschangebote." onchange="saveRules()"></textarea>
+    </div>
+
+    <hr class="divider">
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <p class="section-title" style="margin:0">Nachricht beantworten</p>
+      <div class="autopilot-badge"><div class="dot"></div>AUTOPILOT</div>
+    </div>
+
+    <div class="field">
+      <label>Artikel / Kontext</label>
+      <input type="text" id="artikelContext" placeholder="z.B. W107 Scheinwerfer links, 185€">
+    </div>
+    <div class="field">
+      <label>Nachricht des Käufers</label>
+      <textarea id="buyerMessage" rows="4" placeholder="Nachricht hier einkopieren …"></textarea>
+    </div>
+
+    <button class="btn btn-primary" id="replyBtn" onclick="generateReply()">
+      <span id="replyBtnIcon">🤖</span> Antwort generieren <span style="opacity:.6;font-size:12px;font-weight:500">(⅓ Credit)</span>
+    </button>
+
+    <div class="result-box" id="replyResult">
+      <div class="result-header">
+        <span class="result-label">Fertige Antwort</span>
+        <div class="result-actions">
+          <button class="btn btn-copy" id="copyReplyBtn" onclick="copyReply()">Antwort kopieren</button>
+          <button class="btn btn-ghost" style="font-size:12px;padding:6px 14px" onclick="generateReply()">↻ Neue Version</button>
+        </div>
+      </div>
+      <div class="result-content" id="replyText"></div>
+    </div>
+  </div>
+
+  <!-- ══ TAB 3: EINSTELLUNGEN ══ -->
+  <div class="tab-panel" id="tab-settings">
+    <p class="section-title">API & Konfiguration</p>
+    <p class="section-sub">Wird lokal gespeichert – nie an Server übertragen.</p>
+
+    <div class="field">
+      <label>Claude API Key</label>
+      <input type="password" id="apiKeyInput" placeholder="sk-ant-api03-…" autocomplete="off">
+    </div>
+    <div class="field">
+      <label>Supabase URL</label>
+      <input type="text" id="sbUrlInput" placeholder="https://ysqzdqazcgyuzdorauiq.supabase.co">
+    </div>
+    <div class="field">
+      <label>Supabase Anon Key</label>
+      <input type="password" id="sbKeyInput" placeholder="sb_publishable_…">
+    </div>
+
+    <hr class="divider">
+    <p class="section-title">Stripe Price IDs</p>
+    <p class="section-sub">Nach Anlage in Stripe hier eintragen.</p>
+
+    <div class="field">
+      <label>Starter (5€ / 15 Credits)</label>
+      <input type="text" id="stripeStarter" placeholder="price_XXXX">
+    </div>
+    <div class="field">
+      <label>Standard (10€ / 40 Credits)</label>
+      <input type="text" id="stripeStandard" placeholder="price_XXXX">
+    </div>
+    <div class="field">
+      <label>Power (20€ / 100 Credits)</label>
+      <input type="text" id="stripePower" placeholder="price_XXXX">
+    </div>
+    <div class="field">
+      <label>Deine Domain (für Stripe Success/Cancel URLs)</label>
+      <input type="text" id="domainInput" placeholder="https://teilepilot.de">
+    </div>
+
+    <button class="btn btn-primary" onclick="saveSettings()">💾 Einstellungen speichern</button>
+    <span class="save-ind" id="settingsSaveInd" style="margin-left:12px">● gespeichert</span>
+
+    <hr class="divider">
+    <p class="section-title" style="color:var(--red)">Danger Zone</p>
+    <button class="btn btn-ghost" onclick="resetAll()" style="color:var(--red);border-color:var(--red)">🗑 Alle Daten löschen</button>
+  </div>
+
+</div><!-- /main -->
+
+<!-- ══ MODAL: CREDITS KAUFEN ══ -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-title">⚡ Credits aufladen</div>
+    <div class="modal-sub">Keine Abos. Kein Verfallsdatum. Einfach kaufen und losarbeiten.</div>
+
+    <div class="pakete">
+      <div class="paket-card" onclick="checkout('starter')">
+        <div>
+          <div class="paket-name">Starter</div>
+          <div class="paket-desc">15 Credits · 15 Inserate oder 45 Antworten</div>
+        </div>
+        <div style="text-align:right">
+          <div class="paket-price">5 €</div>
+          <div style="font-size:11px;color:var(--text-dim)">0,33€ / Credit</div>
+        </div>
+      </div>
+
+      <div class="paket-card featured" onclick="checkout('standard')">
+        <div>
+          <div class="paket-name">Standard</div>
+          <div class="paket-desc">40 Credits · 40 Inserate oder 120 Antworten</div>
+          <div class="paket-badge">BELIEBT</div>
+        </div>
+        <div style="text-align:right">
+          <div class="paket-price">10 €</div>
+          <div style="font-size:11px;color:var(--text-dim)">0,25€ / Credit</div>
+        </div>
+      </div>
+
+      <div class="paket-card" onclick="checkout('power')">
+        <div>
+          <div class="paket-name">Power</div>
+          <div class="paket-desc">100 Credits · 100 Inserate oder 300 Antworten</div>
+        </div>
+        <div style="text-align:right">
+          <div class="paket-price">20 €</div>
+          <div style="font-size:11px;color:var(--text-dim)">0,20€ / Credit</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-close">
+      <button onclick="closeModal()">Schließen</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══ CONFIG (aus localStorage) ══
+var CFG = {
+  apiKey: '',
+  sbUrl: 'https://ysqzdqazcgyuzdorauiq.supabase.co',
+  sbKey: '',
+  stripeStarter: '',
+  stripeStandard: '',
+  stripePower: '',
+  domain: ''
+};
+
+function loadConfig() {
+  var stored = localStorage.getItem('tp_config');
+  if (stored) {
+    try { CFG = JSON.parse(stored); } catch(e) {}
+  }
+  document.getElementById('apiKeyInput').value = CFG.apiKey || '';
+  document.getElementById('sbUrlInput').value = CFG.sbUrl || '';
+  document.getElementById('sbKeyInput').value = CFG.sbKey || '';
+  document.getElementById('stripeStarter').value = CFG.stripeStarter || '';
+  document.getElementById('stripeStandard').value = CFG.stripeStandard || '';
+  document.getElementById('stripePower').value = CFG.stripePower || '';
+  document.getElementById('domainInput').value = CFG.domain || '';
+}
+
+function saveSettings() {
+  CFG.apiKey = document.getElementById('apiKeyInput').value.trim();
+  CFG.sbUrl = document.getElementById('sbUrlInput').value.trim();
+  CFG.sbKey = document.getElementById('sbKeyInput').value.trim();
+  CFG.stripeStarter = document.getElementById('stripeStarter').value.trim();
+  CFG.stripeStandard = document.getElementById('stripeStandard').value.trim();
+  CFG.stripePower = document.getElementById('stripePower').value.trim();
+  CFG.domain = document.getElementById('domainInput').value.trim();
+  localStorage.setItem('tp_config', JSON.stringify(CFG));
+  showSaveInd('settingsSaveInd');
+  updateGenerateBtn();
+  initCredits();
+}
+
+function resetAll() {
+  if (confirm('Wirklich alle Daten löschen?')) {
+    localStorage.clear();
+    location.reload();
+  }
+}
+
+// ══ BROWSER ID ══
+function getBrowserId() {
+  var id = localStorage.getItem('tp_browser_id');
+  if (!id) {
+    id = 'tp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    localStorage.setItem('tp_browser_id', id);
+  }
+  return id;
+}
+
+// ══ CREDITS (Supabase) ══
+var currentCredits = 0;
+var replyUsageAccum = 0; // jede 3. Antwort = 1 Credit
+
+function sbHeaders() {
+  return {
+    'Content-Type': 'application/json',
+    'apikey': CFG.sbKey,
+    'Authorization': 'Bearer ' + CFG.sbKey
+  };
+}
+
+function initCredits() {
+  if (!CFG.sbUrl || !CFG.sbKey) {
+    // Offline-Modus: localStorage-Credits
+    var local = parseInt(localStorage.getItem('tp_credits_local') || '10');
+    currentCredits = local;
+    updateCreditDisplay();
+    return;
+  }
+
+  var bid = getBrowserId();
+  // Prüfe ob schon vorhanden
+  fetch(CFG.sbUrl + '/rest/v1/teilepilot_credits?browser_id=eq.' + encodeURIComponent(bid) + '&select=*', {
+    headers: sbHeaders()
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data && data.length > 0) {
+      currentCredits = data[0].credits;
+      updateCreditDisplay();
+      // Onboard-Bar verstecken wenn schon bekannter User
+      var ob = document.getElementById('onboardBar');
+      if (ob && data[0].credits_used > 0) ob.classList.add('hide');
+    } else {
+      // Neu anlegen mit 10 Gratis-Credits
+      fetch(CFG.sbUrl + '/rest/v1/teilepilot_credits', {
+        method: 'POST',
+        headers: sbHeaders(),
+        body: JSON.stringify({ browser_id: bid, credits: 10 })
+      })
+      .then(function() {
+        currentCredits = 10;
+        updateCreditDisplay();
+      });
+    }
+  })
+  .catch(function() {
+    // Fallback localStorage
+    var local = parseInt(localStorage.getItem('tp_credits_local') || '10');
+    currentCredits = local;
+    updateCreditDisplay();
+  });
+}
+
+function updateCreditDisplay() {
+  var el = document.getElementById('creditNum');
+  var disp = document.getElementById('creditDisplay');
+  el.textContent = currentCredits;
+  if (currentCredits <= 3) {
+    disp.classList.add('credit-low');
+  } else {
+    disp.classList.remove('credit-low');
+  }
+  updateGenerateBtn();
+}
+
+function deductCredit(amount, callback) {
+  // amount: 1 für Inserat, 0.333 für Antwort (alle 3 = 1)
+  var bid = getBrowserId();
+
+  if (amount === 1) {
+    // Ganzer Credit
+    if (currentCredits < 1) { openModal(); return false; }
+    currentCredits = currentCredits - 1;
+    updateCreditDisplay();
+    syncCredits(bid, -1);
+    if (callback) callback();
+    return true;
+  } else {
+    // Antwort: sammle 3, dann 1 Credit
+    replyUsageAccum = replyUsageAccum + 1;
+    if (replyUsageAccum >= 3) {
+      if (currentCredits < 1) { openModal(); return false; }
+      replyUsageAccum = 0;
+      currentCredits = currentCredits - 1;
+      updateCreditDisplay();
+      syncCredits(bid, -1);
+    }
+    if (callback) callback();
+    return true;
+  }
+}
+
+function syncCredits(bid, delta) {
+  if (!CFG.sbUrl || !CFG.sbKey) {
+    localStorage.setItem('tp_credits_local', currentCredits);
+    return;
+  }
+  // Lese aktuell, dann update
+  fetch(CFG.sbUrl + '/rest/v1/teilepilot_credits?browser_id=eq.' + encodeURIComponent(bid) + '&select=credits,credits_used', {
+    headers: sbHeaders()
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data && data.length > 0) {
+      var newCredits = Math.max(0, data[0].credits + delta);
+      var newUsed = data[0].credits_used + (delta < 0 ? Math.abs(delta) : 0);
+      fetch(CFG.sbUrl + '/rest/v1/teilepilot_credits?browser_id=eq.' + encodeURIComponent(bid), {
+        method: 'PATCH',
+        headers: sbHeaders(),
+        body: JSON.stringify({ credits: newCredits, credits_used: newUsed })
+      });
+    }
+  })
+  .catch(function() {
+    localStorage.setItem('tp_credits_local', currentCredits);
+  });
+}
+
+// ══ STRIPE CHECKOUT ══
+function checkout(paket) {
+  var priceId = '';
+  if (paket === 'starter') priceId = CFG.stripeStarter;
+  if (paket === 'standard') priceId = CFG.stripeStandard;
+  if (paket === 'power') priceId = CFG.stripePower;
+
+  if (!priceId) {
+    alert('Stripe Price ID für dieses Paket noch nicht konfiguriert.\nBitte unter Einstellungen eintragen.');
+    return;
+  }
+
+  var bid = getBrowserId();
+  var domain = CFG.domain || window.location.origin;
+
+  // Stripe Checkout Session via Supabase Edge Function
+  fetch(CFG.sbUrl + '/functions/v1/teilepilot-checkout', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + CFG.sbKey },
+    body: JSON.stringify({
+      price_id: priceId,
+      browser_id: bid,
+      paket: paket,
+      success_url: domain + '/success.html?session_id={CHECKOUT_SESSION_ID}',
+      cancel_url: domain + '/'
+    })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.url) {
+      window.location.href = data.url;
+    } else {
+      alert('Fehler beim Checkout: ' + (data.error || 'Unbekannt'));
+    }
+  })
+  .catch(function(err) {
+    alert('Checkout Fehler: ' + err.message);
+  });
+}
+
+// ══ MODAL ══
+function openModal() { document.getElementById('modalOverlay').classList.add('show'); }
+function closeModal() { document.getElementById('modalOverlay').classList.remove('show'); }
+document.getElementById('modalOverlay').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+// ══ TABS ══
+function switchTab(tab) {
+  var ids = ['inserat', 'autopilot', 'settings'];
+  var panels = document.querySelectorAll('.tab-panel');
+  var btns = document.querySelectorAll('.tab-btn');
+  for (var i = 0; i < ids.length; i++) {
+    panels[i].classList.remove('active');
+    btns[i].classList.remove('active');
+  }
+  document.getElementById('tab-' + tab).classList.add('active');
+  var idx = ids.indexOf(tab);
+  btns[idx].classList.add('active');
+}
+
+// ══ PLATFORM ══
+var currentPlat = 'ka';
+function selectPlat(p) {
+  currentPlat = p;
+  document.getElementById('plat-ka').classList.toggle('active', p === 'ka');
+  document.getElementById('plat-ebay').classList.toggle('active', p === 'ebay');
+  document.getElementById('plat-both').classList.toggle('active', p === 'both');
+}
+
+// ══ FILE UPLOAD ══
+var uploadedImages = [];
+var uploadZone = document.getElementById('uploadZone');
+uploadZone.addEventListener('dragover', function(e) { e.preventDefault(); this.classList.add('drag'); });
+uploadZone.addEventListener('dragleave', function() { this.classList.remove('drag'); });
+uploadZone.addEventListener('drop', function(e) { e.preventDefault(); this.classList.remove('drag'); handleFiles(e.dataTransfer.files); });
+document.getElementById('photoInput').addEventListener('change', function() { handleFiles(this.files); });
+
+function handleFiles(files) {
+  var remaining = 5 - uploadedImages.length;
+  var toAdd = Math.min(files.length, remaining);
+  for (var i = 0; i < toAdd; i++) {
+    (function(file) {
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        uploadedImages.push({ base64: e.target.result.split(',')[1], type: file.type, preview: e.target.result });
+        renderPreviews();
+        updateGenerateBtn();
+      };
+      reader.readAsDataURL(file);
+    })(files[i]);
+  }
+}
+
+function renderPreviews() {
+  var grid = document.getElementById('previewGrid');
+  grid.innerHTML = '';
+  for (var i = 0; i < uploadedImages.length; i++) {
+    (function(idx) {
+      var div = document.createElement('div');
+      div.className = 'preview-item';
+      var img = document.createElement('img');
+      img.src = uploadedImages[idx].preview;
+      var btn = document.createElement('button');
+      btn.className = 'preview-remove';
+      btn.innerHTML = '&times;';
+      btn.onclick = function() { uploadedImages.splice(idx, 1); renderPreviews(); updateGenerateBtn(); };
+      div.appendChild(img); div.appendChild(btn); grid.appendChild(div);
+    })(i);
+  }
+}
+
+function updateGenerateBtn() {
+  var btn = document.getElementById('generateBtn');
+  btn.disabled = !(CFG.apiKey.length > 20 && uploadedImages.length > 0 && currentCredits > 0);
+}
+
+// ══ PLATFORM PROMPT ══
+function getPlatformInstructions() {
+  if (currentPlat === 'ka') return 'Erstelle das Inserat NUR für Kleinanzeigen.de. Titel max. 64 Zeichen. Beschreibung locker, direkt, max. 4000 Zeichen.';
+  if (currentPlat === 'ebay') return 'Erstelle das Inserat NUR für eBay. Titel max. 80 Zeichen. Beschreibung strukturiert mit Aufzählungszeichen. Zustand klar benennen.';
+  return 'Erstelle ZWEI Versionen. Trenne mit "=== KLEINANZEIGEN ===" und "=== EBAY ===". Kleinanzeigen: Titel max. 64 Zeichen, locker. eBay: Titel max. 80 Zeichen, strukturiert.';
+}
+
+// ══ GENERATE INSERAT ══
+var lastInseratRaw = '';
+function generateInserat() {
+  if (!CFG.apiKey || uploadedImages.length === 0 || currentCredits < 1) return;
+
+  deductCredit(1, function() {
+    var btn = document.getElementById('generateBtn');
+    btn.disabled = true;
+    document.getElementById('generateBtnIcon').innerHTML = '<span class="spinner"></span>';
+
+    var condition = document.getElementById('conditionInput').value;
+    var price = document.getElementById('priceInput').value;
+
+    var blocks = [];
+    for (var i = 0; i < uploadedImages.length; i++) {
+      blocks.push({ type: 'image', source: { type: 'base64', media_type: uploadedImages[i].type, data: uploadedImages[i].base64 } });
+    }
+
+    var prompt = 'Du bist ein erfahrener Kleinanzeigen-Experte. Analysiere die Fotos und erstelle ein optimales Inserat.\n\n';
+    prompt += getPlatformInstructions() + '\n\n';
+    prompt += 'STRUKTUR DER AUSGABE:\n';
+    prompt += '1. KATEGORIE: [z.B. "🎯 Oldtimer-Teil erkannt" oder "📱 Elektronik" oder "🛋️ Möbel"]\n';
+    prompt += '2. TITEL: [optimierter Titel]\n';
+    prompt += '3. BESCHREIBUNG:\n[vollständiger Inseratstext]\n';
+    prompt += '4. PREISVORSCHLAG: [konkreter Preis basierend auf Marktpreisen]\n';
+    prompt += '5. ZUSTAND: [Bewertung anhand der Fotos]\n\n';
+    if (condition) prompt += 'Verkäufer-Hinweis: ' + condition + '\n';
+    if (price) prompt += 'Wunschpreis: ' + price + ' Euro\n';
+    prompt += '\nSchreibe natürlich und authentisch. Kein Marketing-Blabla.';
+    blocks.push({ type: 'text', text: prompt });
+
+    fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': CFG.apiKey, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1500, messages: [{ role: 'user', content: blocks }] })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var text = (data.content && data.content[0]) ? data.content[0].text : '';
+      lastInseratRaw = text;
+      var catMatch = text.match(/KATEGORIE:\s*(.+)/);
+      if (catMatch) {
+        document.getElementById('catLabel').textContent = catMatch[1].trim();
+        document.getElementById('catChip').classList.add('show');
+      }
+      document.getElementById('inseratText').textContent = text;
+      document.getElementById('inseratResult').classList.add('show');
+      btn.disabled = false;
+      document.getElementById('generateBtnIcon').textContent = '✨';
+      updateGenerateBtn();
+      document.getElementById('inseratResult').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    })
+    .catch(function(err) {
+      alert('Fehler: ' + err.message);
+      // Credit zurückgeben bei Fehler
+      currentCredits = currentCredits + 1;
+      updateCreditDisplay();
+      syncCredits(getBrowserId(), 1);
+      btn.disabled = false;
+      document.getElementById('generateBtnIcon').textContent = '✨';
+      updateGenerateBtn();
+    });
+  });
+}
+
+// ══ COPY ══
+function copySection(type) {
+  var text = lastInseratRaw;
+  if (type === 'title') {
+    var m = text.match(/TITEL:\s*(.+)/);
+    text = m ? m[1].trim() : text;
+    setCopied('copyTitleBtn');
+  } else {
+    setCopied('copyAllBtn');
+  }
+  toClipboard(text);
+}
+
+function copyReply() { toClipboard(lastReplyRaw); setCopied('copyReplyBtn'); }
+
+function toClipboard(text) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).catch(function() { fallbackCopy(text); });
+  } else { fallbackCopy(text); }
+}
+
+function fallbackCopy(text) {
+  var ta = document.createElement('textarea');
+  ta.value = text; document.body.appendChild(ta); ta.select();
+  document.execCommand('copy'); document.body.removeChild(ta);
+}
+
+function setCopied(id) {
+  var btn = document.getElementById(id);
+  var orig = btn.textContent;
+  btn.textContent = '✓ Kopiert!';
+  btn.classList.add('copied');
+  setTimeout(function() { btn.textContent = orig; btn.classList.remove('copied'); }, 2000);
+}
+
+// ══ RULES ══
+function saveRules() {
+  var r = {
+    versand: document.getElementById('ruleVersand').checked,
+    abholung: document.getElementById('ruleAbholung').checked,
+    verhandlung: document.getElementById('ruleVerhandlung').checked,
+    reservierung: document.getElementById('ruleReservierung').checked,
+    rabatt: document.getElementById('ruleRabatt').value,
+    standort: document.getElementById('ruleStandort').value,
+    anmerkung: document.getElementById('ruleAnmerkung').value
+  };
+  localStorage.setItem('tp_rules', JSON.stringify(r));
+  showSaveInd('saveInd');
+}
+
+function loadRules() {
+  var stored = localStorage.getItem('tp_rules');
+  if (!stored) return;
+  try {
+    var r = JSON.parse(stored);
+    document.getElementById('ruleVersand').checked = r.versand !== false;
+    document.getElementById('ruleAbholung').checked = r.abholung !== false;
+    document.getElementById('ruleVerhandlung').checked = !!r.verhandlung;
+    document.getElementById('ruleReservierung').checked = !!r.reservierung;
+    document.getElementById('ruleRabatt').value = r.rabatt || '';
+    document.getElementById('ruleStandort').value = r.standort || '';
+    document.getElementById('ruleAnmerkung').value = r.anmerkung || '';
+  } catch(e) {}
+}
+
+function getRulesText() {
+  var lines = [];
+  lines.push('Versand: ' + (document.getElementById('ruleVersand').checked ? 'ja' : 'nein'));
+  lines.push('Selbstabholung: ' + (document.getElementById('ruleAbholung').checked ? 'ja' : 'nein'));
+  var standort = document.getElementById('ruleStandort').value;
+  if (standort) lines.push('Abholort: ' + standort);
+  var verh = document.getElementById('ruleVerhandlung').checked;
+  var rbt = document.getElementById('ruleRabatt').value;
+  lines.push('Preisverhandlung: ' + (verh ? 'ja, max. ' + (rbt || '?') + '% Rabatt' : 'nein, Festpreis'));
+  lines.push('Reservierung: ' + (document.getElementById('ruleReservierung').checked ? 'ja' : 'nein'));
+  var anm = document.getElementById('ruleAnmerkung').value;
+  if (anm) lines.push('Hinweis: ' + anm);
+  return lines.join('\n');
+}
+
+// ══ GENERATE REPLY ══
+var lastReplyRaw = '';
+function generateReply() {
+  var msg = document.getElementById('buyerMessage').value.trim();
+  if (!msg || !CFG.apiKey) return;
+
+  deductCredit(0.333, function() {
+    var btn = document.getElementById('replyBtn');
+    btn.disabled = true;
+    document.getElementById('replyBtnIcon').innerHTML = '<span class="spinner"></span>';
+
+    var artikel = document.getElementById('artikelContext').value.trim();
+    var prompt = 'Du bist ein professioneller, freundlicher Kleinanzeigen-Verkäufer. Beantworte die Käufernachricht.\n\n';
+    prompt += 'MEINE VERKÄUFER-REGELN (strikt einhalten):\n' + getRulesText() + '\n\n';
+    if (artikel) prompt += 'ARTIKEL: ' + artikel + '\n\n';
+    prompt += 'KÄUFERNACHRICHT:\n' + msg + '\n\n';
+    prompt += 'REGELN FÜR DEINE ANTWORT:\n';
+    prompt += '- Max. 4-6 Sätze, kurz und direkt\n';
+    prompt += '- Freundlich, aber nicht überschwänglich\n';
+    prompt += '- Kein "Vielen Dank für Ihre Anfrage"-Einstieg\n';
+    prompt += '- Bei unhöflichen Fragen: professionell und sachlich bleiben\n';
+    prompt += '- Ton automatisch an Artikelkategorie anpassen (Oldtimer = Kenner-Ton, Elektronik = technisch, etc.)\n';
+    prompt += '- Nur die fertige Antwort ausgeben, keine Erklärungen';
+
+    fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': CFG.apiKey, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 400, messages: [{ role: 'user', content: prompt }] })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var text = (data.content && data.content[0]) ? data.content[0].text : '';
+      lastReplyRaw = text;
+      document.getElementById('replyText').textContent = text;
+      document.getElementById('replyResult').classList.add('show');
+      btn.disabled = false;
+      document.getElementById('replyBtnIcon').textContent = '🤖';
+      document.getElementById('replyResult').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    })
+    .catch(function(err) {
+      alert('Fehler: ' + err.message);
+      btn.disabled = false;
+      document.getElementById('replyBtnIcon').textContent = '🤖';
+    });
+  });
+}
+
+// ══ HELPERS ══
+function showSaveInd(id) {
+  var el = document.getElementById(id);
+  el.classList.add('show');
+  setTimeout(function() { el.classList.remove('show'); }, 2000);
+}
+
+// ══ STRIPE SUCCESS CHECK ══
+function checkStripeSuccess() {
+  var params = new URLSearchParams(window.location.search);
+  var sessionId = params.get('session_id');
+  var paket = params.get('paket');
+  if (!sessionId || !CFG.sbUrl || !CFG.sbKey) return;
+
+  // Verify via Edge Function
+  fetch(CFG.sbUrl + '/functions/v1/teilepilot-verify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + CFG.sbKey },
+    body: JSON.stringify({ session_id: sessionId, browser_id: getBrowserId() })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.credits_added) {
+      currentCredits = currentCredits + data.credits_added;
+      updateCreditDisplay();
+      alert('✅ ' + data.credits_added + ' Credits wurden deinem Konto gutgeschrieben!');
+      window.history.replaceState({}, '', '/');
+    }
+  })
+  .catch(function() {});
+}
+
+// ══ INIT ══
+loadConfig();
+loadRules();
+initCredits();
+checkStripeSuccess();
+
+// Mode param
+(function() {
+  var p = new URLSearchParams(window.location.search);
+  if (p.get('mode') === 'oldtimer') document.title = 'TeilePilot Oldtimer – KI-Assistent';
+})();
+</script>
+</body>
+</html>
