@@ -265,6 +265,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
         <div class="result-actions">
           <button class="btn btn-copy" id="copyTitleBtn" onclick="copySection('title')">Titel kopieren</button>
           <button class="btn btn-copy" id="copyAllBtn" onclick="copySection('all')">Alles kopieren</button>
+          <button class="btn btn-ghost" onclick="exportInserat()" style="font-size:12px;padding:6px 12px">🖨️</button>
         </div>
       </div>
       <textarea class="result-content" id="inseratText" rows="18" style="width:100%;background:transparent;border:none;resize:vertical;outline:none;font-family:inherit;padding:0"></textarea>
@@ -1104,7 +1105,6 @@ function renderWizardStep() {
   html += '<div class="wizard-sub">' + s.sub + '</div>';
 
   if (s.key === 'fotos') {
-    // Foto-Step: Bilder anzeigen
     html += '<div class="wizard-imgs" id="wizardImgs"></div>';
     html += '<div class="wizard-instruction">' + s.instruction + '</div>';
     html += '<div class="wizard-btn-row">';
@@ -1115,11 +1115,12 @@ function renderWizardStep() {
     html += '<div class="wizard-content">' + content + '</div>';
     html += '<div class="wizard-instruction">' + s.instruction + '</div>';
     html += '<div class="wizard-btn-row">';
-    html += '<button class="wizard-btn-copy" onclick="wizardCopy()">' + s.btn + '</button>';
-    if (s.openUrl) {
-      html += '<button class="wizard-btn-skip" onclick="window.open(\'' + s.openUrl + '\',\'_blank\')">Kleinanzeigen öffnen ↗</button>';
-    }
+    html += '<button class="wizard-btn-copy" onclick="wizardCopyOnly()" id="wizardCopyBtn">📋 Kopieren</button>';
+    html += '<button class="wizard-btn-next" onclick="wizardNext()" id="wizardNextBtn" style="flex:0 0 auto;background:var(--surface);border:2px solid var(--amber);color:var(--amber);font-weight:800;font-size:15px;border-radius:var(--radius-sm);padding:14px 20px;cursor:pointer">Weiter →</button>';
     html += '</div>';
+    if (s.openUrl) {
+      html += '<div style="margin-top:10px"><button onclick="window.open(\'' + s.openUrl + '\',\'_blank\')" style="width:100%;background:transparent;border:1px solid var(--border);color:var(--text-dim);font-size:13px;border-radius:var(--radius-sm);padding:10px;cursor:pointer">Kleinanzeigen öffnen ↗</button></div>';
+    }
   }
 
   document.getElementById('wizardSheet').innerHTML = html;
@@ -1138,19 +1139,18 @@ function renderWizardStep() {
   }
 }
 
-function wizardCopy() {
+function wizardCopyOnly() {
   var s = WIZARD_STEPS[wizardStep];
   var text = wizardData[s.key] || '';
+  var btn = document.getElementById('wizardCopyBtn');
   if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(text).then(function() { wizardNext(); });
+    navigator.clipboard.writeText(text).then(function() {
+      if (btn) { btn.textContent = '✅ Kopiert!'; setTimeout(function() { if (btn) btn.textContent = '📋 Kopieren'; }, 2000); }
+    });
   } else {
     var ta = document.createElement('textarea');
-    ta.value = text;
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand('copy');
-    document.body.removeChild(ta);
-    wizardNext();
+    ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+    if (btn) { btn.textContent = '✅ Kopiert!'; setTimeout(function() { if (btn) btn.textContent = '📋 Kopieren'; }, 2000); }
   }
 }
 
@@ -1158,6 +1158,29 @@ function wizardNext() {
   wizardStep++;
   if (wizardStep >= WIZARD_STEPS.length) { closeWizard(); return; }
   renderWizardStep();
+}
+
+// ══ EXPORT / DRUCK ══
+function exportInserat() {
+  var text = document.getElementById('inseratText').value || lastInseratRaw || '';
+  if (!text) { alert('Bitte zuerst ein Inserat generieren.'); return; }
+  var win = window.open('', '_blank');
+  win.document.write('<html><head><title>Inserat – AnzeigenAutopilot</title><style>');
+  win.document.write('body{font-family:Arial,sans-serif;max-width:700px;margin:40px auto;padding:0 20px;color:#111;line-height:1.7}');
+  win.document.write('h1{font-size:18px;border-bottom:2px solid #f59e0b;padding-bottom:8px;margin-bottom:20px}');
+  win.document.write('pre{white-space:pre-wrap;font-family:inherit;font-size:14px}');
+  win.document.write('.footer{margin-top:40px;font-size:11px;color:#999;border-top:1px solid #eee;padding-top:10px}');
+  win.document.write('@media print{.no-print{display:none}}');
+  win.document.write('</style></head><body>');
+  win.document.write('<div class="no-print" style="margin-bottom:20px">');
+  win.document.write('<button onclick="window.print()" style="background:#f59e0b;color:#000;border:none;padding:10px 20px;border-radius:6px;font-weight:700;cursor:pointer;margin-right:10px">🖨️ Drucken / PDF</button>');
+  win.document.write('<button onclick="window.close()" style="background:#eee;border:none;padding:10px 20px;border-radius:6px;cursor:pointer">Schließen</button>');
+  win.document.write('</div>');
+  win.document.write('<h1>✈️ AnzeigenAutopilot – Fertiges Inserat</h1>');
+  win.document.write('<pre>' + text.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</pre>');
+  win.document.write('<div class="footer">Erstellt mit AnzeigenAutopilot · anzeigenautopilot.de</div>');
+  win.document.write('</body></html>');
+  win.document.close();
 }
 </script>
 
