@@ -697,9 +697,24 @@ function handleFiles(files) {
     (function(file) {
       var reader = new FileReader();
       reader.onload = function(e) {
-        uploadedImages.push({ base64: e.target.result.split(',')[1], type: file.type, preview: e.target.result });
-        renderPreviews();
-        updateGenerateBtn();
+        // Bild auf max 1024px komprimieren / Compress image to max 1024px
+        var img = new Image();
+        img.onload = function() {
+          var MAX = 1024;
+          var w = img.width, h = img.height;
+          if (w > MAX || h > MAX) {
+            if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+            else { w = Math.round(w * MAX / h); h = MAX; }
+          }
+          var canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          var compressed = canvas.toDataURL('image/jpeg', 0.70);
+          uploadedImages.push({ base64: compressed.split(',')[1], type: 'image/jpeg', preview: compressed });
+          renderPreviews();
+          updateGenerateBtn();
+        };
+        img.src = e.target.result;
       };
       reader.readAsDataURL(file);
     })(files[i]);
