@@ -148,6 +148,30 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 
 @media(max-width:600px){.tab-panel{padding:18px}.tabs{padding:16px 12px 0}.main{padding:0 12px 60px}}
 @media(max-width:380px){.logo{font-size:15px;gap:6px}}
+
+/* WIZARD */
+.wizard-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:600;display:none;align-items:flex-end;justify-content:center}
+.wizard-overlay.show{display:flex}
+.wizard-sheet{background:var(--surface);border:1px solid var(--border);border-radius:20px 20px 0 0;width:100%;max-width:540px;padding:28px 24px 44px;position:relative;animation:slideUp .25s ease}
+@keyframes slideUp{from{transform:translateY(60px);opacity:0}to{transform:translateY(0);opacity:1}}
+.wizard-progress{display:flex;gap:6px;margin-bottom:24px}
+.wizard-dot{flex:1;height:4px;border-radius:4px;background:var(--border);transition:background .3s}
+.wizard-dot.done{background:var(--amber)}
+.wizard-dot.active{background:var(--amber);opacity:.6}
+.wizard-step-label{font-size:11px;font-weight:700;letter-spacing:.8px;color:var(--amber);text-transform:uppercase;margin-bottom:6px}
+.wizard-title{font-size:20px;font-weight:800;margin-bottom:4px}
+.wizard-sub{font-size:13px;color:var(--text-dim);margin-bottom:18px}
+.wizard-content{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;font-size:14px;line-height:1.6;margin-bottom:16px;max-height:160px;overflow-y:auto;word-break:break-word}
+.wizard-instruction{background:var(--amber-glow);border:1px solid var(--amber-dim);border-radius:var(--radius-sm);padding:11px 14px;font-size:13px;margin-bottom:18px;line-height:1.5}
+.wizard-instruction strong{color:var(--amber)}
+.wizard-imgs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.wizard-img{width:72px;height:72px;object-fit:cover;border-radius:10px;border:2px solid var(--border)}
+.wizard-btn-row{display:flex;gap:10px}
+.wizard-btn-copy{flex:1;background:var(--amber);color:#000;font-weight:800;font-size:15px;border:none;border-radius:var(--radius-sm);padding:14px;cursor:pointer;transition:opacity .15s}
+.wizard-btn-copy:active{opacity:.75}
+.wizard-btn-skip{background:transparent;border:1px solid var(--border);color:var(--text-dim);font-size:13px;border-radius:var(--radius-sm);padding:14px 16px;cursor:pointer}
+.wizard-btn-finish{flex:1;background:#22c55e;color:#000;font-weight:800;font-size:15px;border:none;border-radius:var(--radius-sm);padding:14px;cursor:pointer}
+.wizard-close{position:absolute;top:14px;right:18px;background:none;border:none;color:var(--text-dim);font-size:22px;cursor:pointer;line-height:1}
 </style>
 </head>
 <body>
@@ -233,6 +257,10 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
       </div>
       <div class="result-content" id="inseratText"></div>
     </div>
+
+    <button class="btn btn-primary" id="startWizardBtn" onclick="startWizard()" style="display:none;margin-top:14px;width:100%;background:var(--green,#22c55e);color:#000;font-size:16px;font-weight:800">
+      🚀 Jetzt inserieren — Schritt für Schritt
+    </button>
   </div>
 
   <!-- ══ TAB 2: AUTOPILOT ══ -->
@@ -743,10 +771,11 @@ function generateInserat() {
       }
       document.getElementById('inseratText').textContent = text;
       document.getElementById('inseratResult').classList.add('show');
+      document.getElementById('startWizardBtn').style.display = 'block';
       btn.disabled = false;
       document.getElementById('generateBtnIcon').textContent = '✨';
       updateGenerateBtn();
-      document.getElementById('inseratResult').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      document.getElementById('startWizardBtn').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     })
     .catch(function(err) {
       alert('Fehler: ' + err.message);
@@ -931,6 +960,153 @@ checkStripeSuccess();
   var p = new URLSearchParams(window.location.search);
   if (p.get('mode') === 'oldtimer') document.title = 'AnzeigenAutopilot Oldtimer – KI-Assistent';
 })();
+
+// ══ WIZARD ══
+var wizardStep = 0;
+var wizardData = {};
+
+var WIZARD_STEPS = [
+  {
+    label: 'Schritt 1 von 4 — Kategorie',
+    title: 'Kategorie übernehmen',
+    sub: 'Kopiere die Kategorie, öffne dann Kleinanzeigen und starte eine neue Anzeige.',
+    key: 'kategorie',
+    instruction: '<strong>Dann:</strong> Öffne Kleinanzeigen → "Anzeige aufgeben" → passende Kategorie wählen',
+    btn: '📋 Kategorie kopieren & weiter',
+    openUrl: 'https://www.kleinanzeigen.de/m-meine-anzeigen.html'
+  },
+  {
+    label: 'Schritt 2 von 4 — Titel',
+    title: 'Titel einfügen',
+    sub: 'Kopiere den Titel und füge ihn in das Titelfeld bei Kleinanzeigen ein.',
+    key: 'titel',
+    instruction: '<strong>Dann:</strong> Kleinanzeigen → Titelfeld antippen → Einfügen',
+    btn: '📋 Titel kopieren & weiter',
+    openUrl: null
+  },
+  {
+    label: 'Schritt 3 von 4 — Beschreibung',
+    title: 'Verkaufstext einfügen',
+    sub: 'Kopiere den Verkaufstext und füge ihn in das Beschreibungsfeld ein.',
+    key: 'beschreibung',
+    instruction: '<strong>Dann:</strong> Kleinanzeigen → Beschreibungsfeld antippen → Einfügen',
+    btn: '📋 Text kopieren & weiter',
+    openUrl: null
+  },
+  {
+    label: 'Schritt 4 von 4 — Fotos',
+    title: 'Fotos hochladen',
+    sub: 'Lade jetzt deine Fotos direkt bei Kleinanzeigen hoch.',
+    key: 'fotos',
+    instruction: '<strong>Dann:</strong> Kleinanzeigen → "Fotos hinzufügen" → die gleichen Fotos auswählen → Anzeige speichern',
+    btn: null,
+    openUrl: null
+  }
+];
+
+function parseInserat(raw) {
+  var kat = '', titel = '', desc = '';
+  var katM = raw.match(/KATEGORIE[:\s]+([^\n\-]+)/);
+  if (katM) kat = katM[1].replace(/^[\s🎯]+/, '').trim();
+  var titM = raw.match(/TITEL[:\s]*\n?[`']?([^\n`']+)[`']?/);
+  if (titM) titel = titM[1].trim();
+  var descM = raw.match(/BESCHREIBUNG[:\s]*\n([\s\S]+?)(?:\n---|\n\d\.|\n4\.|\nPREIS|$)/);
+  if (descM) desc = descM[1].replace(/^\.\.\.\s*\n?/, '').trim();
+  return { kategorie: kat || '(Kategorie nicht erkannt)', titel: titel || '(Titel nicht erkannt)', beschreibung: desc || raw.substring(0, 600) };
+}
+
+function startWizard() {
+  var raw = lastInseratRaw || '';
+  if (!raw) return;
+  wizardData = parseInserat(raw);
+  wizardStep = 0;
+  renderWizardStep();
+  document.getElementById('wizardOverlay').classList.add('show');
+}
+
+function closeWizard() {
+  document.getElementById('wizardOverlay').classList.remove('show');
+}
+
+function renderWizardStep() {
+  var s = WIZARD_STEPS[wizardStep];
+  var html = '';
+
+  // Progress dots
+  html += '<div class="wizard-progress">';
+  for (var i = 0; i < WIZARD_STEPS.length; i++) {
+    var cls = i < wizardStep ? 'done' : (i === wizardStep ? 'active' : '');
+    html += '<div class="wizard-dot ' + cls + '"></div>';
+  }
+  html += '</div>';
+
+  html += '<button class="wizard-close" onclick="closeWizard()">×</button>';
+  html += '<div class="wizard-step-label">' + s.label + '</div>';
+  html += '<div class="wizard-title">' + s.title + '</div>';
+  html += '<div class="wizard-sub">' + s.sub + '</div>';
+
+  if (s.key === 'fotos') {
+    // Foto-Step: Bilder anzeigen
+    html += '<div class="wizard-imgs" id="wizardImgs"></div>';
+    html += '<div class="wizard-instruction">' + s.instruction + '</div>';
+    html += '<div class="wizard-btn-row">';
+    html += '<button class="wizard-btn-finish" onclick="closeWizard()">✅ Fertig — Anzeige ist live!</button>';
+    html += '</div>';
+  } else {
+    var content = wizardData[s.key] || '';
+    html += '<div class="wizard-content">' + content + '</div>';
+    html += '<div class="wizard-instruction">' + s.instruction + '</div>';
+    html += '<div class="wizard-btn-row">';
+    html += '<button class="wizard-btn-copy" onclick="wizardCopy()">' + s.btn + '</button>';
+    if (s.openUrl) {
+      html += '<button class="wizard-btn-skip" onclick="window.open(\'' + s.openUrl + '\',\'_blank\')">Kleinanzeigen öffnen ↗</button>';
+    }
+    html += '</div>';
+  }
+
+  document.getElementById('wizardSheet').innerHTML = html;
+
+  // Fotos einfügen
+  if (s.key === 'fotos') {
+    var container = document.getElementById('wizardImgs');
+    if (container && uploadedImages.length > 0) {
+      for (var j = 0; j < uploadedImages.length; j++) {
+        var img = document.createElement('img');
+        img.src = uploadedImages[j];
+        img.className = 'wizard-img';
+        container.appendChild(img);
+      }
+    }
+  }
+}
+
+function wizardCopy() {
+  var s = WIZARD_STEPS[wizardStep];
+  var text = wizardData[s.key] || '';
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function() { wizardNext(); });
+  } else {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    wizardNext();
+  }
+}
+
+function wizardNext() {
+  wizardStep++;
+  if (wizardStep >= WIZARD_STEPS.length) { closeWizard(); return; }
+  renderWizardStep();
+}
 </script>
+
+<!-- WIZARD OVERLAY -->
+<div class="wizard-overlay" id="wizardOverlay">
+  <div class="wizard-sheet" id="wizardSheet"></div>
+</div>
+
 </body>
 </html>
