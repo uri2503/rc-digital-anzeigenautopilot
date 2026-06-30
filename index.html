@@ -115,6 +115,15 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 .spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(245,158,11,.3);border-top-color:var(--amber);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle}
 @keyframes spin{to{transform:rotate(360deg)}}
 
+/* KI PROGRESS BAR */
+.ki-progress{display:none;margin:16px 0;border-radius:var(--radius-sm);overflow:hidden;background:var(--border);height:6px}
+.ki-progress.show{display:block}
+.ki-progress-bar{height:100%;background:linear-gradient(90deg,var(--amber),#f97316);border-radius:4px;animation:kiLoad 18s ease-in-out forwards}
+@keyframes kiLoad{0%{width:0%}30%{width:35%}60%{width:65%}85%{width:85%}100%{width:92%}}
+.ki-status{display:none;font-size:12px;color:var(--text-dim);margin-top:6px;text-align:center;animation:fadeIn .4s ease}
+.ki-status.show{display:block}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+
 /* AUTOPILOT BADGE */
 .autopilot-badge{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;letter-spacing:.5px;color:var(--amber)}
 .autopilot-badge .dot{width:8px;height:8px;background:var(--amber);border-radius:50%;animation:pulse 1.8s ease-in-out infinite}
@@ -244,6 +253,9 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
     <button class="btn btn-primary" id="generateBtn" onclick="generateInserat()" disabled>
       <span id="generateBtnIcon">✨</span> Inserat generieren <span style="opacity:.6;font-size:12px;font-weight:500">(1 Credit)</span>
     </button>
+
+    <div class="ki-progress" id="kiProgress"><div class="ki-progress-bar" id="kiProgressBar"></div></div>
+    <div class="ki-status" id="kiStatus">🤖 KI analysiert Fotos und schreibt dein Inserat …</div>
 
     <div class="cat-chip" id="catChip">🎯 <span id="catLabel"></span></div>
 
@@ -733,6 +745,17 @@ function generateInserat() {
     var btn = document.getElementById('generateBtn');
     btn.disabled = true;
     document.getElementById('generateBtnIcon').innerHTML = '<span class="spinner"></span>';
+    document.getElementById('startWizardBtn').style.display = 'none';
+    // Ladebalken einblenden / Show progress bar
+    var prog = document.getElementById('kiProgress');
+    var progBar = document.getElementById('kiProgressBar');
+    var stat = document.getElementById('kiStatus');
+    prog.classList.add('show');
+    stat.classList.add('show');
+    // Animation neu starten / Restart animation
+    progBar.style.animation = 'none';
+    progBar.offsetHeight; // reflow
+    progBar.style.animation = 'kiLoad 18s ease-in-out forwards';
 
     var condition = document.getElementById('conditionInput').value;
     var price = document.getElementById('priceInput').value;
@@ -772,6 +795,9 @@ function generateInserat() {
       document.getElementById('inseratText').textContent = text;
       document.getElementById('inseratResult').classList.add('show');
       document.getElementById('startWizardBtn').style.display = 'block';
+      // Ladebalken ausblenden / Hide progress bar
+      document.getElementById('kiProgress').classList.remove('show');
+      document.getElementById('kiStatus').classList.remove('show');
       btn.disabled = false;
       document.getElementById('generateBtnIcon').textContent = '✨';
       updateGenerateBtn();
@@ -779,6 +805,8 @@ function generateInserat() {
     })
     .catch(function(err) {
       alert('Fehler: ' + err.message);
+      document.getElementById('kiProgress').classList.remove('show');
+      document.getElementById('kiStatus').classList.remove('show');
       // Credit zurückgeben bei Fehler
       currentCredits = currentCredits + 1;
       updateCreditDisplay();
