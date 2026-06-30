@@ -762,6 +762,7 @@ function generateInserat() {
 
     var blocks = [];
     for (var i = 0; i < uploadedImages.length; i++) {
+      // Bilder auf max 800px reduzieren um Payload klein zu halten / Resize images to max 800px
       blocks.push({ type: 'image', source: { type: 'base64', media_type: uploadedImages[i].type, data: uploadedImages[i].base64 } });
     }
 
@@ -778,14 +779,33 @@ function generateInserat() {
     prompt += '\nSchreibe natürlich und authentisch. Kein Marketing-Blabla.';
     blocks.push({ type: 'text', text: prompt });
 
+    function resetBtn() {
+      document.getElementById('kiProgress').classList.remove('show');
+      document.getElementById('kiStatus').classList.remove('show');
+      btn.disabled = false;
+      document.getElementById('generateBtnIcon').textContent = '✨';
+      updateGenerateBtn();
+    }
+
+    // 55s Timeout / 55s timeout
+    var controller = new AbortController();
+    var timeoutId = setTimeout(function() { controller.abort(); }, 55000);
+
     fetch(CFG.sbUrl + '/functions/v1/claude-proxy', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + CFG.sbKey },
-      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1500, messages: [{ role: 'user', content: blocks }] })
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1500, messages: [{ role: 'user', content: blocks }] }),
+      signal: controller.signal
     })
-    .then(function(r) { return r.json(); })
+    .then(function(r) {
+      clearTimeout(timeoutId);
+      if (!r.ok) { return r.text().then(function(t) { throw new Error('Server ' + r.status + ': ' + t.substring(0, 200)); }); }
+      return r.json();
+    })
     .then(function(data) {
+      if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
       var text = (data.content && data.content[0]) ? data.content[0].text : '';
+      if (!text) throw new Error('KI hat keinen Text zurückgegeben.');
       lastInseratRaw = text;
       var catMatch = text.match(/KATEGORIE:\s*(.+)/);
       if (catMatch) {
@@ -795,25 +815,18 @@ function generateInserat() {
       document.getElementById('inseratText').value = text;
       document.getElementById('inseratResult').classList.add('show');
       document.getElementById('startWizardBtn').style.display = 'block';
-      // Ladebalken ausblenden / Hide progress bar
-      document.getElementById('kiProgress').classList.remove('show');
-      document.getElementById('kiStatus').classList.remove('show');
-      btn.disabled = false;
-      document.getElementById('generateBtnIcon').textContent = '✨';
-      updateGenerateBtn();
+      resetBtn();
       document.getElementById('startWizardBtn').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     })
     .catch(function(err) {
-      alert('Fehler: ' + err.message);
-      document.getElementById('kiProgress').classList.remove('show');
-      document.getElementById('kiStatus').classList.remove('show');
-      // Credit zurückgeben bei Fehler
+      clearTimeout(timeoutId);
+      var msg = err.name === 'AbortError' ? 'Timeout – KI hat zu lange gebraucht. Bitte nochmal versuchen.' : ('Fehler: ' + err.message);
+      alert(msg);
+      // Credit zurückgeben / Refund credit
       currentCredits = currentCredits + 1;
       updateCreditDisplay();
       syncCredits(getBrowserId(), 1);
-      btn.disabled = false;
-      document.getElementById('generateBtnIcon').textContent = '✨';
-      updateGenerateBtn();
+      resetBtn();
     });
   });
 }
