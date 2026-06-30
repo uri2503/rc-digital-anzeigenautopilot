@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TeilePilot – KI-Assistent für Kleinanzeigen</title>
+<title>AnzeigenAutopilot – KI-Assistent für Kleinanzeigen</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -147,6 +147,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 .onboard-bar.hide{display:none}
 
 @media(max-width:600px){.tab-panel{padding:18px}.tabs{padding:16px 12px 0}.main{padding:0 12px 60px}}
+@media(max-width:380px){.logo{font-size:15px;gap:6px}}
 </style>
 </head>
 <body>
@@ -156,7 +157,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
   <div class="header-inner">
     <div class="logo">
       <div class="logo-icon">✈</div>
-      Teile<span>Pilot</span>
+      Anzeigen<span>Autopilot</span>
     </div>
     <div class="credit-badge">
       <div class="credit-display" id="creditDisplay" onclick="openModal()">
@@ -310,10 +311,6 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
     <p class="section-sub">Wird lokal gespeichert – nie an Server übertragen.</p>
 
     <div class="field">
-      <label>Claude API Key</label>
-      <input type="password" id="apiKeyInput" placeholder="sk-ant-api03-…" autocomplete="off">
-    </div>
-    <div class="field">
       <label>Supabase URL</label>
       <input type="text" id="sbUrlInput" placeholder="https://ysqzdqazcgyuzdorauiq.supabase.co">
     </div>
@@ -340,7 +337,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
     </div>
     <div class="field">
       <label>Deine Domain (für Stripe Success/Cancel URLs)</label>
-      <input type="text" id="domainInput" placeholder="https://teilepilot.de">
+      <input type="text" id="domainInput" placeholder="https://anzeigenautopilot.de">
     </div>
 
     <button class="btn btn-primary" onclick="saveSettings()">💾 Einstellungen speichern</button>
@@ -404,7 +401,6 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 <script>
 // ══ CONFIG (aus localStorage) ══
 var CFG = {
-  apiKey: '',
   sbUrl: 'https://ysqzdqazcgyuzdorauiq.supabase.co',
   sbKey: '',
   stripeStarter: 'price_1To3HODWofgqLQp3Fv7dTIhJ',
@@ -418,7 +414,6 @@ function loadConfig() {
   if (stored) {
     try { CFG = JSON.parse(stored); } catch(e) {}
   }
-  document.getElementById('apiKeyInput').value = CFG.apiKey || '';
   document.getElementById('sbUrlInput').value = CFG.sbUrl || '';
   document.getElementById('sbKeyInput').value = CFG.sbKey || '';
   document.getElementById('stripeStarter').value = CFG.stripeStarter || '';
@@ -428,7 +423,6 @@ function loadConfig() {
 }
 
 function saveSettings() {
-  CFG.apiKey = document.getElementById('apiKeyInput').value.trim();
   CFG.sbUrl = document.getElementById('sbUrlInput').value.trim();
   CFG.sbKey = document.getElementById('sbKeyInput').value.trim();
   CFG.stripeStarter = document.getElementById('stripeStarter').value.trim();
@@ -692,7 +686,7 @@ function renderPreviews() {
 
 function updateGenerateBtn() {
   var btn = document.getElementById('generateBtn');
-  btn.disabled = !(CFG.apiKey.length > 20 && uploadedImages.length > 0 && currentCredits > 0);
+  btn.disabled = !(CFG.sbUrl && CFG.sbKey && uploadedImages.length > 0 && currentCredits > 0);
 }
 
 // ══ PLATFORM PROMPT ══
@@ -705,7 +699,7 @@ function getPlatformInstructions() {
 // ══ GENERATE INSERAT ══
 var lastInseratRaw = '';
 function generateInserat() {
-  if (!CFG.apiKey || uploadedImages.length === 0 || currentCredits < 1) return;
+  if (!CFG.sbUrl || !CFG.sbKey || uploadedImages.length === 0 || currentCredits < 1) return;
 
   deductCredit(1, function() {
     var btn = document.getElementById('generateBtn');
@@ -733,9 +727,9 @@ function generateInserat() {
     prompt += '\nSchreibe natürlich und authentisch. Kein Marketing-Blabla.';
     blocks.push({ type: 'text', text: prompt });
 
-    fetch('https://api.anthropic.com/v1/messages', {
+    fetch(CFG.sbUrl + '/functions/v1/claude-proxy', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': CFG.apiKey, 'anthropic-version': '2023-06-01' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + CFG.sbKey },
       body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1500, messages: [{ role: 'user', content: blocks }] })
     })
     .then(function(r) { return r.json(); })
@@ -851,7 +845,7 @@ function getRulesText() {
 var lastReplyRaw = '';
 function generateReply() {
   var msg = document.getElementById('buyerMessage').value.trim();
-  if (!msg || !CFG.apiKey) return;
+  if (!msg || !CFG.sbUrl || !CFG.sbKey) return;
 
   deductCredit(0.333, function() {
     var btn = document.getElementById('replyBtn');
@@ -871,9 +865,9 @@ function generateReply() {
     prompt += '- Ton automatisch an Artikelkategorie anpassen (Oldtimer = Kenner-Ton, Elektronik = technisch, etc.)\n';
     prompt += '- Nur die fertige Antwort ausgeben, keine Erklärungen';
 
-    fetch('https://api.anthropic.com/v1/messages', {
+    fetch(CFG.sbUrl + '/functions/v1/claude-proxy', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': CFG.apiKey, 'anthropic-version': '2023-06-01' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + CFG.sbKey },
       body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 400, messages: [{ role: 'user', content: prompt }] })
     })
     .then(function(r) { return r.json(); })
@@ -935,7 +929,7 @@ checkStripeSuccess();
 // Mode param
 (function() {
   var p = new URLSearchParams(window.location.search);
-  if (p.get('mode') === 'oldtimer') document.title = 'TeilePilot Oldtimer – KI-Assistent';
+  if (p.get('mode') === 'oldtimer') document.title = 'AnzeigenAutopilot Oldtimer – KI-Assistent';
 })();
 </script>
 </body>
