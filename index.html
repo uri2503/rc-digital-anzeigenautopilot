@@ -323,7 +323,15 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 
     <div class="field">
       <label>Artikel / Kontext</label>
-      <input type="text" id="artikelContext" placeholder="z.B. W107 Scheinwerfer links, 185€">
+      <div style="display:flex;gap:8px;align-items:flex-start">
+        <div style="flex:1">
+          <select id="inseratDropdown" onchange="selectInserat()" style="width:100%;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:14px;margin-bottom:8px">
+            <option value="">— Gespeichertes Inserat wählen —</option>
+          </select>
+          <input type="text" id="artikelContext" placeholder="oder manuell eingeben: z.B. Alfa Felgen, 800€">
+        </div>
+        <button onclick="deleteSelectedInserat()" title="Ausgewähltes Inserat löschen" style="background:transparent;border:1px solid var(--border);color:var(--text-dim);border-radius:var(--radius-sm);padding:10px 12px;cursor:pointer;flex-shrink:0;font-size:14px">🗑</button>
+      </div>
     </div>
     <div class="field">
       <label>Nachricht des Käufers</label>
@@ -333,6 +341,9 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
     <button class="btn btn-primary" id="replyBtn" onclick="generateReply()">
       <span id="replyBtnIcon">🤖</span> Antwort generieren <span style="opacity:.6;font-size:12px;font-weight:500">(⅓ Credit)</span>
     </button>
+
+    <div class="ki-progress" id="kiProgressReply"><div class="ki-progress-bar" id="kiProgressBarReply"></div></div>
+    <div class="ki-status" id="kiStatusReply">🤖 Autopilot formuliert deine Antwort …</div>
 
     <div class="result-box" id="replyResult">
       <div class="result-header">
@@ -831,6 +842,7 @@ function generateInserat() {
       document.getElementById('inseratText').value = text;
       document.getElementById('inseratResult').classList.add('show');
       document.getElementById('startWizardBtn').style.display = 'block';
+      saveInseratToList(text); // Inserat in Liste speichern / Save listing to list
       resetBtn();
       document.getElementById('startWizardBtn').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     })
@@ -880,6 +892,57 @@ function setCopied(id) {
   btn.textContent = '✓ Kopiert!';
   btn.classList.add('copied');
   setTimeout(function() { btn.textContent = orig; btn.classList.remove('copied'); }, 2000);
+}
+
+// ══ INSERAT-LISTE ══
+function getSavedInserate() {
+  try { return JSON.parse(localStorage.getItem('tp_inserate') || '[]'); } catch(e) { return []; }
+}
+
+function saveInseratToList(text) {
+  var titM = text.match(/TITEL[:\s]*\n?[`']?([^\n`']+)[`']?/);
+  var titel = titM ? titM[1].trim() : text.substring(0, 50);
+  var id = 'ins_' + Date.now();
+  var inserate = getSavedInserate();
+  inserate.unshift({ id: id, titel: titel, text: text, datum: new Date().toLocaleDateString('de-DE') });
+  if (inserate.length > 20) inserate = inserate.slice(0, 20); // max 20
+  localStorage.setItem('tp_inserate', JSON.stringify(inserate));
+  renderInseratDropdown();
+}
+
+function renderInseratDropdown() {
+  var sel = document.getElementById('inseratDropdown');
+  if (!sel) return;
+  var inserate = getSavedInserate();
+  sel.innerHTML = '<option value="">— Inserat wählen (für Kontext) —</option>';
+  inserate.forEach(function(ins) {
+    var opt = document.createElement('option');
+    opt.value = ins.id;
+    opt.textContent = ins.datum + ' · ' + ins.titel.substring(0, 50);
+    sel.appendChild(opt);
+  });
+}
+
+function selectInserat() {
+  var sel = document.getElementById('inseratDropdown');
+  if (!sel || !sel.value) {
+    document.getElementById('artikelContext').value = '';
+    return;
+  }
+  var inserate = getSavedInserate();
+  var found = inserate.filter(function(x) { return x.id === sel.value; });
+  if (found.length) {
+    document.getElementById('artikelContext').value = found[0].titel;
+  }
+}
+
+function deleteSelectedInserat() {
+  var sel = document.getElementById('inseratDropdown');
+  if (!sel || !sel.value) { alert('Bitte zuerst ein Inserat auswählen.'); return; }
+  var inserate = getSavedInserate().filter(function(x) { return x.id !== sel.value; });
+  localStorage.setItem('tp_inserate', JSON.stringify(inserate));
+  document.getElementById('artikelContext').value = '';
+  renderInseratDropdown();
 }
 
 // ══ RULES ══
@@ -937,11 +1000,32 @@ function generateReply() {
     var btn = document.getElementById('replyBtn');
     btn.disabled = true;
     document.getElementById('replyBtnIcon').innerHTML = '<span class="spinner"></span>';
+    var rProg = document.getElementById('kiProgressReply');
+    var rProgBar = document.getElementById('kiProgressBarReply');
+    var rStat = document.getElementById('kiStatusReply');
+    rProg.classList.add('show');
+    rStat.classList.add('show');
+    rProgBar.style.animation = 'none';
+    rProgBar.offsetHeight;
+    rProgBar.style.animation = 'kiLoad 8s ease-in-out forwards';
 
     var artikel = document.getElementById('artikelContext').value.trim();
+    // Volles Inserat aus Dropdown holen falls gewählt / Get full listing from dropdown if selected
+    var sel = document.getElementById('inseratDropdown');
+    var fullInserat = '';
+    if (sel && sel.value) {
+      var inserate = getSavedInserate();
+      var found = inserate.filter(function(x) { return x.id === sel.value; });
+      if (found.length) fullInserat = found[0].text;
+    }
+
     var prompt = 'Du bist ein professioneller, freundlicher Kleinanzeigen-Verkäufer. Beantworte die Käufernachricht.\n\n';
     prompt += 'MEINE VERKÄUFER-REGELN (strikt einhalten):\n' + getRulesText() + '\n\n';
-    if (artikel) prompt += 'ARTIKEL: ' + artikel + '\n\n';
+    if (fullInserat) {
+      prompt += 'MEIN INSERAT (Volltext – für Preis, Zustand, Details):\n' + fullInserat + '\n\n';
+    } else if (artikel) {
+      prompt += 'ARTIKEL: ' + artikel + '\n\n';
+    }
     prompt += 'KÄUFERNACHRICHT:\n' + msg + '\n\n';
     prompt += 'REGELN FÜR DEINE ANTWORT:\n';
     prompt += '- Max. 4-6 Sätze, kurz und direkt\n';
@@ -962,12 +1046,16 @@ function generateReply() {
       lastReplyRaw = text;
       document.getElementById('replyText').textContent = text;
       document.getElementById('replyResult').classList.add('show');
+      document.getElementById('kiProgressReply').classList.remove('show');
+      document.getElementById('kiStatusReply').classList.remove('show');
       btn.disabled = false;
       document.getElementById('replyBtnIcon').textContent = '🤖';
       document.getElementById('replyResult').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     })
     .catch(function(err) {
       alert('Fehler: ' + err.message);
+      document.getElementById('kiProgressReply').classList.remove('show');
+      document.getElementById('kiStatusReply').classList.remove('show');
       btn.disabled = false;
       document.getElementById('replyBtnIcon').textContent = '🤖';
     });
@@ -1013,6 +1101,7 @@ initCredits();
 checkStripeSuccess();
 document.getElementById('startWizardBtn').style.display = 'none';
 document.getElementById('inseratResult').classList.remove('show');
+renderInseratDropdown();
 
 // Mode param
 (function() {
