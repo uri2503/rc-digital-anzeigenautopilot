@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AnzeigenAutopilot – KI-Assistent für Kleinanzeigen</title>
-<!-- build: 2026-07-06-2 -->
+<!-- build: 2026-07-06-3 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -290,8 +290,16 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
     </div>
 
     <div class="field">
-      <label>Werksausstattung <span style="font-weight:400;opacity:.6">(optional einfügen, z.B. von lastvin.com)</span></label>
-      <textarea id="factoryEquipInput" rows="4" placeholder="Ausstattungsliste hier einfügen …" style="width:100%;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:12px;padding:12px;color:inherit;font-family:inherit;resize:vertical"></textarea>
+      <label>Werksausstattung <span style="font-weight:400;opacity:.6">(optional – PDF von lastvin.com hochladen oder Text einfügen)</span></label>
+      <div class="upload-zone" id="factoryPdfZone" style="padding:14px;margin-bottom:10px">
+        <input type="file" id="factoryPdfInput" accept="application/pdf">
+        <div class="upload-icon" style="font-size:20px">📋</div>
+        <div class="upload-text" style="font-size:13px"><strong>lastvin-PDF hochladen</strong><br>
+          <span style="font-size:11px;opacity:.6">wird automatisch ausgelesen</span>
+        </div>
+      </div>
+      <div id="factoryPdfName" style="display:none;font-size:12px;opacity:.7;margin-bottom:8px">📄 <span id="factoryPdfNameText"></span> <button class="btn btn-ghost" onclick="removeFactoryPdf()" style="font-size:11px;padding:4px 8px;margin-left:6px">entfernen</button></div>
+      <textarea id="factoryEquipInput" rows="4" placeholder="… oder Ausstattungsliste als Text hier einfügen" style="width:100%;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:12px;padding:12px;color:inherit;font-family:inherit;resize:vertical"></textarea>
     </div>
 
     <div class="field">
@@ -901,6 +909,34 @@ function copyFin() {
   setCopied('copyFinBtn');
 }
 
+// ══ WERKSAUSSTATTUNG PDF UPLOAD ══
+var factoryPdf = null;
+var factoryPdfZone = document.getElementById('factoryPdfZone');
+factoryPdfZone.addEventListener('dragover', function(e) { e.preventDefault(); this.classList.add('drag'); });
+factoryPdfZone.addEventListener('dragleave', function() { this.classList.remove('drag'); });
+factoryPdfZone.addEventListener('drop', function(e) { e.preventDefault(); this.classList.remove('drag'); handleFactoryPdf(e.dataTransfer.files[0]); });
+document.getElementById('factoryPdfInput').addEventListener('change', function() { handleFactoryPdf(this.files[0]); });
+
+function handleFactoryPdf(file) {
+  if (!file) return;
+  if (file.type !== 'application/pdf') { alert('Bitte eine PDF-Datei auswählen.'); return; }
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    factoryPdf = { base64: e.target.result.split(',')[1], name: file.name };
+    document.getElementById('factoryPdfNameText').textContent = file.name;
+    document.getElementById('factoryPdfName').style.display = 'block';
+    document.getElementById('factoryEquipInput').placeholder = 'PDF wird verwendet – Text hier ist optional zusätzlich';
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeFactoryPdf() {
+  factoryPdf = null;
+  document.getElementById('factoryPdfInput').value = '';
+  document.getElementById('factoryPdfName').style.display = 'none';
+  document.getElementById('factoryEquipInput').placeholder = '… oder Ausstattungsliste als Text hier einfügen';
+}
+
 function updateGenerateBtn() {
   var btn = document.getElementById('generateBtn');
   btn.disabled = !(CFG.sbUrl && CFG.sbKey && uploadedImages.length > 0 && currentCredits > 0);
@@ -946,6 +982,9 @@ function generateInserat() {
     if (fzsImage) {
       blocks.push({ type: 'image', source: { type: 'base64', media_type: fzsImage.type, data: fzsImage.base64 } });
     }
+    if (factoryPdf) {
+      blocks.push({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: factoryPdf.base64 } });
+    }
 
     var prompt = 'Du bist ein erfahrener Kleinanzeigen-Experte. Analysiere die Fotos und erstelle ein optimales Inserat.\n\n';
     prompt += getPlatformInstructions() + '\n\n';
@@ -959,8 +998,12 @@ function generateInserat() {
       prompt += 'Gib diese Werte IMMER als letzten Block der Antwort in genau diesem Format aus, auch wenn manche Werte unbekannt sind:\n';
       prompt += '6. FAHRZEUGDATEN:\nFIN: [FIN oder "unbekannt"]\nIST_MERCEDES: [ja oder nein]\n\n';
     }
+    if (factoryPdf) {
+      prompt += 'Im Anhang befindet sich außerdem eine PDF-Werksdatenkarte (z.B. von lastvin.com) mit der originalen Sonderausstattung dieses Fahrzeugs (SA-Codes). ';
+      prompt += 'Lies daraus die Ausstattungsmerkmale (SA-Code Beschreibungen), Innenausstattung, Lackfarbe und ggf. Getriebe/Motor aus und nutze sie als verlässliche Quelle für Beschreibungstext, Ausstattungsliste und Preisvorschlag.\n\n';
+    }
     if (factoryEquip) {
-      prompt += 'WERKSAUSSTATTUNG (vom Nutzer bereitgestellt, z.B. von lastvin.com): ' + factoryEquip + '\n';
+      prompt += 'WERKSAUSSTATTUNG (vom Nutzer als Text bereitgestellt, z.B. von lastvin.com): ' + factoryEquip + '\n';
       prompt += 'Berücksichtige diese Ausstattung im Beschreibungstext und im Preisvorschlag.\n\n';
     }
     prompt += 'STRUKTUR DER AUSGABE:\n';
