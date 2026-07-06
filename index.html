@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AnzeigenAutopilot – KI-Assistent für Kleinanzeigen</title>
+<!-- build: 2026-07-06-1 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -515,7 +516,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 // ══ CONFIG (aus localStorage) ══
 var CFG = {
   sbUrl: 'https://ysqzdqazcgyuzdorauiq.supabase.co',
-  sbKey: '',
+  sbKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzcXpkcWF6Y2d5dXpkb3JhdWlxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5ODM0NzcsImV4cCI6MjA5NTU1OTQ3N30.u5cbSVniUl5Zvlf2rdpnjtvDyKvv9csmPwvdtnEwWzE',
   stripeStarter: 'price_1To3HODWofgqLQp3Fv7dTIhJ',
   stripeStandard: 'price_1To3JHDWofgqLQp3TKCON6Sf',
   stripePower: 'price_1To3L1DWofgqLQp3G2Xd37nU',
@@ -523,9 +524,17 @@ var CFG = {
 };
 
 function loadConfig() {
+  var defaultSbKey = CFG.sbKey;
   var stored = localStorage.getItem('tp_config');
   if (stored) {
-    try { CFG = JSON.parse(stored); } catch(e) {}
+    try {
+      var parsed = JSON.parse(stored);
+      CFG = parsed;
+      // Falls im gespeicherten Config kein Key vorhanden ist, Standard-Key verwenden
+      // If stored config has no key, fall back to default key
+      if (!CFG.sbKey) CFG.sbKey = defaultSbKey;
+      if (!CFG.sbUrl) CFG.sbUrl = 'https://ysqzdqazcgyuzdorauiq.supabase.co';
+    } catch(e) {}
   }
   document.getElementById('sbUrlInput').value = CFG.sbUrl || '';
   document.getElementById('sbKeyInput').value = CFG.sbKey || '';
