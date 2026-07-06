@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AnzeigenAutopilot – KI-Assistent für Kleinanzeigen</title>
-<!-- build: 2026-07-06-5 -->
+<!-- build: 2026-07-06-6 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -312,6 +312,63 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
       </div>
     </div>
 
+    <div id="vehicleDetailsToggle" onclick="toggleVehicleDetails()" style="display:flex;align-items:center;gap:8px;padding:10px 4px;cursor:pointer;font-size:13px;opacity:.6;border-bottom:1px solid var(--border);margin-bottom:14px">
+      <span id="vehicleDetailsIcon">▸</span>
+      <span>Fahrzeugdetails selbst angeben (optional – spart der KI das Raten)</span>
+    </div>
+    <div id="vehicleDetailsBody" style="display:none">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div class="field" style="margin-bottom:0">
+          <label>Kilometerstand</label>
+          <input type="number" id="vdKm" placeholder="z.B. 85000" min="0">
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label>HU bis</label>
+          <input type="text" id="vdHu" placeholder="z.B. 03/2027">
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label>Getriebe</label>
+          <select id="vdGetriebe"><option value="">– bitte wählen –</option><option>Automatik</option><option>Manuell</option></select>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label>Kraftstoffart</label>
+          <select id="vdKraftstoff"><option value="">– bitte wählen –</option><option>Benzin</option><option>Diesel</option><option>Erdgas (CNG)</option><option>Autogas (LPG)</option><option>Hybrid</option><option>Elektro</option><option>Andere Kraftstoffarten</option></select>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label>Fahrzeugtyp</label>
+          <select id="vdFahrzeugtyp"><option value="">– bitte wählen –</option><option>Kleinwagen</option><option>Limousine</option><option>Kombi</option><option>Cabrio</option><option>SUV/Geländewagen</option><option>Van/Bus</option><option>Coupé</option><option>Andere Fahrzeugtypen</option></select>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label>Anzahl Türen</label>
+          <select id="vdTueren"><option value="">– bitte wählen –</option><option>2/3</option><option>4/5</option><option>6/7</option><option>Andere Türanzahl</option></select>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label>Außenfarbe</label>
+          <select id="vdFarbe"><option value="">– bitte wählen –</option><option>Beige</option><option>Blau</option><option>Braun</option><option>Gelb</option><option>Gold</option><option>Grau</option><option>Grün</option><option>Orange</option><option>Rot</option><option>Schwarz</option><option>Silber</option><option>Violet</option><option>Weiß</option><option>Andere Farben</option></select>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label>Material Innenausstattung</label>
+          <select id="vdMaterial"><option value="">– bitte wählen –</option><option>Vollleder</option><option>Teilleder</option><option>Stoff</option><option>Velours</option><option>Alcantara</option><option>Andere Materialien Innenausstattung</option></select>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label>Umweltplakette</label>
+          <select id="vdPlakette"><option value="">– bitte wählen –</option><option>4 (Grün)</option><option>3 (Gelb)</option><option>2 (Rot)</option><option>1 (Keine)</option></select>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label>Schadstoffklasse</label>
+          <select id="vdSchadstoff"><option value="">– bitte wählen –</option><option>Euro1</option><option>Euro2</option><option>Euro3</option><option>Euro4</option><option>Euro5</option><option>Euro6</option></select>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label>Fahrzeugzustand</label>
+          <select id="vdZustand"><option value="">– bitte wählen –</option><option>Beschädigtes Fahrzeug</option><option>Unbeschädigtes Fahrzeug</option></select>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label>Leistung (PS)</label>
+          <input type="number" id="vdPs" placeholder="z.B. 150" min="0">
+        </div>
+      </div>
+    </div>
+
     <div class="field">
       <label>Zustand / Hinweise <span style="font-weight:400;opacity:.6">(optional)</span></label>
       <input type="text" id="conditionInput" placeholder="z.B. leichte Gebrauchsspuren, funktioniert einwandfrei …">
@@ -358,7 +415,8 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
           <button class="btn btn-copy" id="copyFillHelpBtn" onclick="copyFillHelp()">Alles kopieren</button>
         </div>
       </div>
-      <div style="font-size:11px;opacity:.6;margin-bottom:10px">Zeile antippen zum Kopieren – dann in Kleinanzeigen einfügen</div>
+      <div style="font-size:11px;opacity:.6;margin-bottom:10px">Werte bei Bedarf korrigieren, dann 📋 zum Kopieren antippen</div>
+      <div style="font-size:11px;opacity:.5;margin-bottom:10px">Vor dem Generieren kannst du Fahrzeugdetails auch selbst angeben, dann muss die KI nicht raten.</div>
       <div id="fillHelpList"></div>
     </div>
 
@@ -943,6 +1001,14 @@ function expandMercedesExtras() {
   document.getElementById('mercedesExtrasIcon').textContent = '▾';
 }
 
+// ══ FAHRZEUGDETAILS EIN-/AUSKLAPPEN ══
+function toggleVehicleDetails() {
+  var body = document.getElementById('vehicleDetailsBody');
+  var isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : 'block';
+  document.getElementById('vehicleDetailsIcon').textContent = isOpen ? '▸' : '▾';
+}
+
 // ══ WERKSAUSSTATTUNG PDF UPLOAD ══
 var factoryPdf = null;
 var factoryPdfZone = document.getElementById('factoryPdfZone');
@@ -1008,6 +1074,22 @@ function generateInserat() {
     var price = document.getElementById('priceInput').value;
     var factoryEquip = document.getElementById('factoryEquipInput').value;
 
+    var vd = {
+      km: document.getElementById('vdKm').value,
+      hu: document.getElementById('vdHu').value,
+      getriebe: document.getElementById('vdGetriebe').value,
+      kraftstoff: document.getElementById('vdKraftstoff').value,
+      fahrzeugtyp: document.getElementById('vdFahrzeugtyp').value,
+      tueren: document.getElementById('vdTueren').value,
+      farbe: document.getElementById('vdFarbe').value,
+      material: document.getElementById('vdMaterial').value,
+      plakette: document.getElementById('vdPlakette').value,
+      schadstoff: document.getElementById('vdSchadstoff').value,
+      zustand: document.getElementById('vdZustand').value,
+      ps: document.getElementById('vdPs').value
+    };
+    var vdFilled = Object.keys(vd).filter(function(k) { return vd[k]; });
+
     var blocks = [];
     for (var i = 0; i < uploadedImages.length; i++) {
       // Bilder auf max 800px reduzieren um Payload klein zu halten / Resize images to max 800px
@@ -1040,6 +1122,22 @@ function generateInserat() {
       prompt += 'WERKSAUSSTATTUNG (vom Nutzer als Text bereitgestellt, z.B. von lastvin.com): ' + factoryEquip + '\n';
       prompt += 'Berücksichtige diese Ausstattung im Beschreibungstext und im Preisvorschlag.\n\n';
     }
+    if (vdFilled.length > 0) {
+      prompt += 'VERBINDLICHE FAHRZEUGDATEN (vom Nutzer selbst angegeben – diese Werte MÜSSEN exakt so übernommen werden, NICHT schätzen oder abweichen):\n';
+      if (vd.km) prompt += 'Kilometerstand: ' + vd.km + '\n';
+      if (vd.hu) prompt += 'HU bis: ' + vd.hu + '\n';
+      if (vd.getriebe) prompt += 'Getriebe: ' + vd.getriebe + '\n';
+      if (vd.kraftstoff) prompt += 'Kraftstoffart: ' + vd.kraftstoff + '\n';
+      if (vd.fahrzeugtyp) prompt += 'Fahrzeugtyp: ' + vd.fahrzeugtyp + '\n';
+      if (vd.tueren) prompt += 'Anzahl Türen: ' + vd.tueren + '\n';
+      if (vd.farbe) prompt += 'Außenfarbe: ' + vd.farbe + '\n';
+      if (vd.material) prompt += 'Material Innenausstattung: ' + vd.material + '\n';
+      if (vd.plakette) prompt += 'Umweltplakette: ' + vd.plakette + '\n';
+      if (vd.schadstoff) prompt += 'Schadstoffklasse: ' + vd.schadstoff + '\n';
+      if (vd.zustand) prompt += 'Fahrzeugzustand: ' + vd.zustand + '\n';
+      if (vd.ps) prompt += 'Leistung: ' + vd.ps + ' PS\n';
+      prompt += '\n';
+    }
     prompt += 'STRUKTUR DER AUSGABE:\n';
     prompt += '1. KATEGORIE: [z.B. "🎯 Oldtimer-Teil erkannt" oder "📱 Elektronik" oder "🛋️ Möbel"]\n';
     prompt += '2. TITEL: [optimierter Titel]\n';
@@ -1066,7 +1164,8 @@ function generateInserat() {
     prompt += 'Außenfarbe: [genau eines von: Beige | Blau | Braun | Gelb | Gold | Grau | Grün | Orange | Rot | Schwarz | Silber | Violet | Weiß | Andere Farben]\n';
     prompt += 'Material Innenausstattung: [genau eines von: Vollleder | Teilleder | Stoff | Velours | Alcantara | Andere Materialien Innenausstattung]\n';
     prompt += 'Ausstattung: [kommagetrennte Liste NUR aus dieser festen Liste, je nachdem was erkennbar/plausibel ist: Anhängerkupplung, Einparkhilfe, Leichtmetallfelgen, Xenon-/LED-Scheinwerfer, Klimaanlage, Navigationssystem, Radio/Tuner, Bluetooth, Freisprecheinrichtung, Schiebedach/Panoramadach, Sitzheizung, Tempomat, Nichtraucher-Fahrzeug, Antiblockiersystem (ABS)]\n';
-    prompt += 'Gib bei jedem Feld exakt einen der genannten Werte oder "unbekannt" aus – niemals eigene Formulierungen oder mehrere Werte kombiniert (außer bei Ausstattung).';
+    prompt += 'Gib bei jedem Feld exakt einen der genannten Werte oder "unbekannt" aus – niemals eigene Formulierungen oder mehrere Werte kombiniert (außer bei Ausstattung). ';
+    prompt += 'WICHTIG: Wenn ein Wert nicht aus Fotos, Fahrzeugschein oder den Angaben des Nutzers eindeutig hervorgeht, schreibe "unbekannt" – rate niemals einen plausibel klingenden Wert (z.B. Kraftstoffart oder Umweltplakette nicht einfach annehmen, wenn kein Beleg dafür vorliegt).';
     blocks.push({ type: 'text', text: prompt });
 
     function resetBtn() {
@@ -1163,34 +1262,45 @@ function copySection(type) {
 function copyReply() { toClipboard(lastReplyRaw); setCopied('copyReplyBtn'); }
 
 // ══ AUSFUELLHILFE KLEINANZEIGEN ══
-var fillHelpLines = [];
 function renderFillHelp(rawBlock) {
   var box = document.getElementById('fillHelpResult');
   var list = document.getElementById('fillHelpList');
   list.innerHTML = '';
-  fillHelpLines = [];
 
   if (!rawBlock || !rawBlock.trim()) { box.classList.remove('show'); return; }
 
   var lines = rawBlock.split('\n');
+  var rowCount = 0;
   for (var i = 0; i < lines.length; i++) {
     var m = lines[i].match(/^([^:]+):\s*(.+)$/);
     if (!m) continue;
     var label = m[1].trim();
     var value = m[2].trim();
     if (!value || value.toLowerCase() === 'unbekannt') continue;
-    fillHelpLines.push(label + ': ' + value);
+    rowCount++;
 
     (function(lbl, val) {
       var row = document.createElement('div');
-      row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer';
-      row.innerHTML = '<span style="opacity:.6;font-size:13px">' + lbl + '</span><span style="font-weight:600;font-size:14px;text-align:right;margin-left:12px">' + val + '</span>';
-      row.onclick = function() { toClipboard(val); showRowCopied(row); };
+      row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)';
+      var labelSpan = document.createElement('span');
+      labelSpan.style.cssText = 'opacity:.6;font-size:13px;flex:0 0 45%';
+      labelSpan.textContent = lbl;
+      var input = document.createElement('input');
+      input.type = 'text';
+      input.value = val;
+      input.style.cssText = 'flex:1;background:transparent;border:none;border-bottom:1px dashed var(--border);color:inherit;font-weight:600;font-size:14px;text-align:right;padding:4px 2px;font-family:inherit';
+      input.dataset.label = lbl;
+      var copyBtn = document.createElement('button');
+      copyBtn.className = 'btn btn-ghost';
+      copyBtn.textContent = '📋';
+      copyBtn.style.cssText = 'font-size:12px;padding:6px 8px;flex:0 0 auto';
+      copyBtn.onclick = function() { toClipboard(input.value); showRowCopied(row); };
+      row.appendChild(labelSpan); row.appendChild(input); row.appendChild(copyBtn);
       list.appendChild(row);
     })(label, value);
   }
 
-  box.classList.toggle('show', fillHelpLines.length > 0);
+  box.classList.toggle('show', rowCount > 0);
 }
 
 function showRowCopied(row) {
@@ -1200,7 +1310,10 @@ function showRowCopied(row) {
 }
 
 function copyFillHelp() {
-  toClipboard(fillHelpLines.join('\n'));
+  var inputs = document.querySelectorAll('#fillHelpList input');
+  var lines = [];
+  inputs.forEach(function(inp) { lines.push(inp.dataset.label + ': ' + inp.value); });
+  toClipboard(lines.join('\n'));
   setCopied('copyFillHelpBtn');
 }
 
