@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AnzeigenAutopilot – KI-Assistent für Kleinanzeigen</title>
-<!-- build: 2026-07-06-9 -->
+<!-- build: 2026-07-07-1 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -409,6 +409,20 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
       <div id="fillHelpList"></div>
     </div>
 
+    <div id="marketCheckBox" style="display:none;margin-top:14px">
+      <button class="btn btn-primary" id="marketCheckBtn" onclick="checkMarketPrice()" style="width:100%;background:var(--surface);border:2px solid var(--amber);color:var(--amber);font-size:15px;font-weight:800">
+        🔍 Marktpreis-Check <span style="opacity:.7;font-size:12px;font-weight:500">(2 Credits) – was verlangt die Konkurrenz gerade?</span>
+      </button>
+      <div class="ki-progress" id="marketProgress" style="display:none"><div class="ki-progress-bar" id="marketProgressBar"></div></div>
+      <div class="ki-status" id="marketStatus" style="display:none">🔍 Durchsuche aktuelle Vergleichsangebote …</div>
+      <div class="result-box" id="marketResult" style="margin-top:12px">
+        <div class="result-header">
+          <span class="result-label">Marktpreis-Analyse</span>
+        </div>
+        <div id="marketResultContent" style="font-size:14px;line-height:1.6"></div>
+      </div>
+    </div>
+
     <div id="finalActions" style="display:none">
       <button class="btn btn-primary" id="copyEverythingBtn" onclick="copyEverything()" style="margin-top:14px;width:100%;background:#22c55e;color:#000;font-size:16px;font-weight:800">
         📋 Alles kopieren — fertig für Kleinanzeigen
@@ -748,15 +762,15 @@ function updateCreditDisplay() {
 }
 
 function deductCredit(amount, callback) {
-  // amount: 1 für Inserat, 0.333 für Antwort (alle 3 = 1)
+  // amount: 1 für Inserat, 2 für Marktpreis-Check, 0.333 für Antwort (alle 3 = 1)
   var bid = getBrowserId();
 
-  if (amount === 1) {
-    // Ganzer Credit
-    if (currentCredits < 1) { openModal(); return false; }
-    currentCredits = currentCredits - 1;
+  if (amount >= 1) {
+    // Ganze Credits (1, 2, ...)
+    if (currentCredits < amount) { openModal(); return false; }
+    currentCredits = currentCredits - amount;
     updateCreditDisplay();
-    syncCredits(bid, -1);
+    syncCredits(bid, -amount);
     if (callback) callback();
     return true;
   } else {
@@ -1052,6 +1066,8 @@ function generateInserat() {
     btn.disabled = true;
     document.getElementById('generateBtnIcon').innerHTML = '<span class="spinner"></span>';
     document.getElementById('finalActions').style.display = 'none';
+    document.getElementById('marketCheckBox').style.display = 'none';
+    document.getElementById('marketResult').classList.remove('show');
     // Ladebalken einblenden / Show progress bar
     var prog = document.getElementById('kiProgress');
     var progBar = document.getElementById('kiProgressBar');
@@ -1230,6 +1246,8 @@ function generateInserat() {
       document.getElementById('inseratText').value = text;
       document.getElementById('inseratResult').classList.add('show');
       document.getElementById('finalActions').style.display = 'block';
+      document.getElementById('marketCheckBox').style.display = 'block';
+      lastMarketQuery = buildMarketQuery();
       saveInseratToList(text); // Inserat in Liste speichern / Save listing to list
       resetBtn();
       document.getElementById('copyEverythingBtn').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -1243,6 +1261,87 @@ function generateInserat() {
       updateCreditDisplay();
       syncCredits(getBrowserId(), 1);
       resetBtn();
+    });
+  });
+}
+
+// ══ MARKTPREIS-CHECK (Web-Search, separater Call ohne Bilder) ══
+var lastMarketQuery = '';
+
+function buildMarketQuery() {
+  // Baut eine Suchanfrage aus Marke/Modell (Fahrzeugdetails) oder aus dem generierten Titel
+  // Build a search query from Marke/Modell (vehicle details) or from the generated title
+  var marke = document.getElementById('vdMarke').value;
+  var modell = document.getElementById('vdModell').value;
+  if (marke || modell) return (marke + ' ' + modell).trim();
+  var titleMatch = lastInseratRaw.match(/TITEL:\s*\n?[`']?([^\n`']+)[`']?/i);
+  return titleMatch ? titleMatch[1].trim() : '';
+}
+
+function checkMarketPrice() {
+  if (currentCredits < 2) { openModal(); return; }
+  var query = lastMarketQuery || buildMarketQuery();
+  if (!query) { alert('Konnte keine Fahrzeugbezeichnung für die Suche ermitteln.'); return; }
+
+  deductCredit(2, function() {
+    var btn = document.getElementById('marketCheckBtn');
+    btn.disabled = true;
+    document.getElementById('marketProgress').style.display = 'block';
+    document.getElementById('marketStatus').style.display = 'block';
+    document.getElementById('marketResult').classList.remove('show');
+
+    var prompt = 'Du bist ein Experte für Gebrauchtwagen-Marktpreise in Deutschland. ';
+    prompt += 'Suche aktuell aktive Verkaufsangebote für folgendes Fahrzeug: "' + query + '". ';
+    prompt += 'Durchsuche dabei gezielt Kleinanzeigen, mobile.de und AutoScout24. ';
+    prompt += 'Fasse zusammen: (1) Preisspanne vergleichbarer aktiver Angebote, (2) 2-3 konkrete Beispielangebote mit Preis und kurzer Beschreibung (Kilometerstand/Zustand falls erkennbar), (3) eine klare Einschätzung, ob der eigene Wunschpreis von ' +
+      (document.getElementById('priceInput').value || 'nicht angegeben') + ' € realistisch, zu hoch oder zu niedrig ist. ';
+    prompt += 'Antworte kompakt in maximal 150 Wörtern, auf Deutsch, ohne lange Einleitung.';
+
+    var controller = new AbortController();
+    var timeoutId = setTimeout(function() { controller.abort(); }, 55000);
+
+    fetch(CFG.sbUrl + '/functions/v1/claude-proxy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + CFG.sbKey },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompt }],
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }]
+      }),
+      signal: controller.signal
+    })
+    .then(function(r) {
+      clearTimeout(timeoutId);
+      if (!r.ok) { return r.text().then(function(t) { throw new Error('Server ' + r.status + ': ' + t.substring(0, 200)); }); }
+      return r.json();
+    })
+    .then(function(data) {
+      if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+      // Alle Text-Blöcke zusammenfügen (Web-Search-Antworten haben mehrere Content-Blöcke)
+      // Combine all text blocks (web search responses have multiple content blocks)
+      var text = (data.content || [])
+        .filter(function(b) { return b.type === 'text'; })
+        .map(function(b) { return b.text; })
+        .join('\n');
+      if (!text) throw new Error('KI hat keine Marktanalyse zurückgegeben.');
+
+      document.getElementById('marketResultContent').innerHTML = text.replace(/\n/g, '<br>');
+      document.getElementById('marketResult').classList.add('show');
+      document.getElementById('marketProgress').style.display = 'none';
+      document.getElementById('marketStatus').style.display = 'none';
+      btn.disabled = false;
+    })
+    .catch(function(err) {
+      clearTimeout(timeoutId);
+      var msg = err.name === 'AbortError' ? 'Timeout – Suche hat zu lange gebraucht. Bitte nochmal versuchen.' : ('Fehler: ' + err.message);
+      alert(msg);
+      currentCredits = currentCredits + 2;
+      updateCreditDisplay();
+      syncCredits(getBrowserId(), 2);
+      document.getElementById('marketProgress').style.display = 'none';
+      document.getElementById('marketStatus').style.display = 'none';
+      btn.disabled = false;
     });
   });
 }
@@ -1631,6 +1730,7 @@ loadRules();
 initCredits();
 checkStripeSuccess();
 document.getElementById('finalActions').style.display = 'none';
+document.getElementById('marketCheckBox').style.display = 'none';
 document.getElementById('inseratResult').classList.remove('show');
 renderInseratDropdown();
 
