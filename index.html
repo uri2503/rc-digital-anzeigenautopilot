@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AnzeigenAutopilot – KI-Assistent für Kleinanzeigen</title>
-<!-- build: 2026-07-06-3 -->
+<!-- build: 2026-07-06-4 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -339,6 +339,17 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
         </div>
       </div>
       <textarea class="result-content" id="inseratText" rows="18" style="width:100%;background:transparent;border:none;resize:vertical;outline:none;font-family:inherit;padding:0"></textarea>
+    </div>
+
+    <div class="result-box" id="fillHelpResult">
+      <div class="result-header">
+        <span class="result-label">Ausfüllhilfe Kleinanzeigen</span>
+        <div class="result-actions">
+          <button class="btn btn-copy" id="copyFillHelpBtn" onclick="copyFillHelp()">Alles kopieren</button>
+        </div>
+      </div>
+      <div style="font-size:11px;opacity:.6;margin-bottom:10px">Zeile antippen zum Kopieren – dann in Kleinanzeigen einfügen</div>
+      <div id="fillHelpList"></div>
     </div>
 
     <button class="btn btn-primary" id="startWizardBtn" onclick="startWizard()" style="display:none;margin-top:14px;width:100%;background:#22c55e;color:#000;font-size:16px;font-weight:800">
@@ -1014,7 +1025,25 @@ function generateInserat() {
     prompt += '5. ZUSTAND: [Bewertung anhand der Fotos]\n\n';
     if (condition) prompt += 'Verkäufer-Hinweis: ' + condition + '\n';
     if (price) prompt += 'Wunschpreis: ' + price + ' Euro\n';
-    prompt += '\nSchreibe natürlich und authentisch. Kein Marketing-Blabla.';
+    prompt += '\nSchreibe natürlich und authentisch. Kein Marketing-Blabla.\n\n';
+
+    prompt += 'FALLS ES SICH UM EIN FAHRZEUG (Auto) HANDELT, gib zusätzlich ganz am Ende einen 7. Block aus:\n';
+    prompt += '7. AUSFUELLHILFE:\n';
+    prompt += 'Kilometerstand: [Zahl oder "unbekannt"]\n';
+    prompt += 'Fahrzeugzustand: [genau eines von: Beschädigtes Fahrzeug | Unbeschädigtes Fahrzeug]\n';
+    prompt += 'Erstzulassung: [Monat Jahr, z.B. "Februar 2002" oder "unbekannt"]\n';
+    prompt += 'Kraftstoffart: [genau eines von: Benzin | Diesel | Erdgas (CNG) | Autogas (LPG) | Hybrid | Elektro | Andere Kraftstoffarten]\n';
+    prompt += 'Leistung: [PS-Zahl oder "unbekannt"]\n';
+    prompt += 'Getriebe: [genau eines von: Automatik | Manuell]\n';
+    prompt += 'Fahrzeugtyp: [genau eines von: Kleinwagen | Limousine | Kombi | Cabrio | SUV/Geländewagen | Van/Bus | Coupé | Andere Fahrzeugtypen]\n';
+    prompt += 'Anzahl Türen: [genau eines von: 2/3 | 4/5 | 6/7 | Andere Türanzahl]\n';
+    prompt += 'HU bis: [Monat Jahr oder "unbekannt"]\n';
+    prompt += 'Umweltplakette: [genau eines von: 4 (Grün) | 3 (Gelb) | 2 (Rot) | 1 (Keine)]\n';
+    prompt += 'Schadstoffklasse: [genau eines von: Euro1 | Euro2 | Euro3 | Euro4 | Euro5 | Euro6]\n';
+    prompt += 'Außenfarbe: [genau eines von: Beige | Blau | Braun | Gelb | Gold | Grau | Grün | Orange | Rot | Schwarz | Silber | Violet | Weiß | Andere Farben]\n';
+    prompt += 'Material Innenausstattung: [genau eines von: Vollleder | Teilleder | Stoff | Velours | Alcantara | Andere Materialien Innenausstattung]\n';
+    prompt += 'Ausstattung: [kommagetrennte Liste NUR aus dieser festen Liste, je nachdem was erkennbar/plausibel ist: Anhängerkupplung, Einparkhilfe, Leichtmetallfelgen, Xenon-/LED-Scheinwerfer, Klimaanlage, Navigationssystem, Radio/Tuner, Bluetooth, Freisprecheinrichtung, Schiebedach/Panoramadach, Sitzheizung, Tempomat, Nichtraucher-Fahrzeug, Antiblockiersystem (ABS)]\n';
+    prompt += 'Gib bei jedem Feld exakt einen der genannten Werte oder "unbekannt" aus – niemals eigene Formulierungen oder mehrere Werte kombiniert (außer bei Ausstattung).';
     blocks.push({ type: 'text', text: prompt });
 
     function resetBtn() {
@@ -1032,7 +1061,7 @@ function generateInserat() {
     fetch(CFG.sbUrl + '/functions/v1/claude-proxy', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + CFG.sbKey },
-      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1500, messages: [{ role: 'user', content: blocks }] }),
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 2000, messages: [{ role: 'user', content: blocks }] }),
       signal: controller.signal
     })
     .then(function(r) {
@@ -1058,9 +1087,15 @@ function generateInserat() {
         document.getElementById('finField').style.display = 'none';
         document.getElementById('lastvinHint').style.display = 'none';
       }
-      // Fahrzeugdaten-Block aus dem für den Kunden sichtbaren Text entfernen
-      // Remove Fahrzeugdaten block from customer-facing text
+      // Fahrzeugdaten-Block (6) parsen, dann Ausfüllhilfe-Block (7) parsen und rendern
+      // Parse Fahrzeugdaten block (6), then parse and render Ausfüllhilfe block (7)
+      var fillHelpMatch = text.match(/7\.\s*AUSFUELLHILFE:\s*([\s\S]*)$/i);
+      renderFillHelp(fillHelpMatch ? fillHelpMatch[1] : '');
+
+      // Beide Blöcke aus dem für den Kunden sichtbaren Text entfernen (ab Block 6 ODER Block 7 abschneiden)
+      // Strip both blocks from customer-facing text (cut from block 6 OR block 7 onward, whichever comes first)
       text = text.replace(/\n?6\.\s*FAHRZEUGDATEN:[\s\S]*$/i, '').trim();
+      text = text.replace(/\n?7\.\s*AUSFUELLHILFE:[\s\S]*$/i, '').trim();
 
       lastInseratRaw = text;
       var catMatch = text.match(/KATEGORIE:\s*(.+)/);
@@ -1102,6 +1137,48 @@ function copySection(type) {
 }
 
 function copyReply() { toClipboard(lastReplyRaw); setCopied('copyReplyBtn'); }
+
+// ══ AUSFUELLHILFE KLEINANZEIGEN ══
+var fillHelpLines = [];
+function renderFillHelp(rawBlock) {
+  var box = document.getElementById('fillHelpResult');
+  var list = document.getElementById('fillHelpList');
+  list.innerHTML = '';
+  fillHelpLines = [];
+
+  if (!rawBlock || !rawBlock.trim()) { box.classList.remove('show'); return; }
+
+  var lines = rawBlock.split('\n');
+  for (var i = 0; i < lines.length; i++) {
+    var m = lines[i].match(/^([^:]+):\s*(.+)$/);
+    if (!m) continue;
+    var label = m[1].trim();
+    var value = m[2].trim();
+    if (!value || value.toLowerCase() === 'unbekannt') continue;
+    fillHelpLines.push(label + ': ' + value);
+
+    (function(lbl, val) {
+      var row = document.createElement('div');
+      row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer';
+      row.innerHTML = '<span style="opacity:.6;font-size:13px">' + lbl + '</span><span style="font-weight:600;font-size:14px;text-align:right;margin-left:12px">' + val + '</span>';
+      row.onclick = function() { toClipboard(val); showRowCopied(row); };
+      list.appendChild(row);
+    })(label, value);
+  }
+
+  box.classList.toggle('show', fillHelpLines.length > 0);
+}
+
+function showRowCopied(row) {
+  var orig = row.style.background;
+  row.style.background = 'rgba(34,197,94,0.15)';
+  setTimeout(function() { row.style.background = orig; }, 800);
+}
+
+function copyFillHelp() {
+  toClipboard(fillHelpLines.join('\n'));
+  setCopied('copyFillHelpBtn');
+}
 
 function toClipboard(text) {
   if (navigator.clipboard && navigator.clipboard.writeText) {
