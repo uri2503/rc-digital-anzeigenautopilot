@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AnzeigenAutopilot – KI-Assistent für Kleinanzeigen</title>
-<!-- build: 2026-07-06-4 -->
+<!-- build: 2026-07-06-5 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -279,27 +279,37 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
       <div style="font-size:11px;opacity:.5;margin-top:4px">Die FIN wird nur lokal angezeigt und nicht gespeichert.</div>
     </div>
 
-    <div class="onboard-bar" id="lastvinHint" style="display:none;margin-top:0">
-      🔎 <span><strong>Werksausstattung abrufen (nur Mercedes)</strong><br>
-      1. FIN kopieren → 2. Bei lastvin.com einfügen → 3. Ausstattungsliste zurückkopieren
-      <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn btn-ghost" onclick="copyFin()" style="font-size:12px;padding:8px 12px">FIN kopieren</button>
-        <button class="btn btn-ghost" onclick="window.open('https://www.lastvin.com/','_blank')" style="font-size:12px;padding:8px 12px">lastvin.com öffnen</button>
+    <div id="mercedesExtras" style="margin-bottom:16px">
+      <div id="mercedesExtrasToggle" onclick="toggleMercedesExtras()" style="display:flex;align-items:center;gap:8px;padding:10px 4px;cursor:pointer;font-size:13px;opacity:.6;border-bottom:1px solid var(--border)">
+        <span id="mercedesExtrasIcon">▸</span>
+        <span>Werksausstattung (optional, nur für Mercedes-Fahrzeuge)</span>
       </div>
-      </span>
-    </div>
+      <div id="mercedesExtrasBody" style="display:none;padding-top:14px">
 
-    <div class="field">
-      <label>Werksausstattung <span style="font-weight:400;opacity:.6">(optional – PDF von lastvin.com hochladen oder Text einfügen)</span></label>
-      <div class="upload-zone" id="factoryPdfZone" style="padding:14px;margin-bottom:10px">
-        <input type="file" id="factoryPdfInput" accept="application/pdf">
-        <div class="upload-icon" style="font-size:20px">📋</div>
-        <div class="upload-text" style="font-size:13px"><strong>lastvin-PDF hochladen</strong><br>
-          <span style="font-size:11px;opacity:.6">wird automatisch ausgelesen</span>
+        <div class="onboard-bar" id="lastvinHint" style="display:none;margin-top:0">
+          🔎 <span><strong>Werksausstattung abrufen (nur Mercedes)</strong><br>
+          1. FIN kopieren → 2. Bei lastvin.com einfügen → 3. Ausstattungsliste zurückkopieren
+          <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-ghost" onclick="copyFin()" style="font-size:12px;padding:8px 12px">FIN kopieren</button>
+            <button class="btn btn-ghost" onclick="window.open('https://www.lastvin.com/','_blank')" style="font-size:12px;padding:8px 12px">lastvin.com öffnen</button>
+          </div>
+          </span>
         </div>
+
+        <div class="field">
+          <label>Werksausstattung <span style="font-weight:400;opacity:.6">(PDF von lastvin.com hochladen oder Text einfügen)</span></label>
+          <div class="upload-zone" id="factoryPdfZone" style="padding:14px;margin-bottom:10px">
+            <input type="file" id="factoryPdfInput" accept="application/pdf">
+            <div class="upload-icon" style="font-size:20px">📋</div>
+            <div class="upload-text" style="font-size:13px"><strong>lastvin-PDF hochladen</strong><br>
+              <span style="font-size:11px;opacity:.6">wird automatisch ausgelesen</span>
+            </div>
+          </div>
+          <div id="factoryPdfName" style="display:none;font-size:12px;opacity:.7;margin-bottom:8px">📄 <span id="factoryPdfNameText"></span> <button class="btn btn-ghost" onclick="removeFactoryPdf()" style="font-size:11px;padding:4px 8px;margin-left:6px">entfernen</button></div>
+          <textarea id="factoryEquipInput" rows="4" placeholder="… oder Ausstattungsliste als Text hier einfügen" style="width:100%;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:12px;padding:12px;color:inherit;font-family:inherit;resize:vertical"></textarea>
+        </div>
+
       </div>
-      <div id="factoryPdfName" style="display:none;font-size:12px;opacity:.7;margin-bottom:8px">📄 <span id="factoryPdfNameText"></span> <button class="btn btn-ghost" onclick="removeFactoryPdf()" style="font-size:11px;padding:4px 8px;margin-left:6px">entfernen</button></div>
-      <textarea id="factoryEquipInput" rows="4" placeholder="… oder Ausstattungsliste als Text hier einfügen" style="width:100%;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:12px;padding:12px;color:inherit;font-family:inherit;resize:vertical"></textarea>
     </div>
 
     <div class="field">
@@ -920,6 +930,19 @@ function copyFin() {
   setCopied('copyFinBtn');
 }
 
+// ══ MERCEDES EXTRAS EIN-/AUSKLAPPEN ══
+function toggleMercedesExtras() {
+  var body = document.getElementById('mercedesExtrasBody');
+  var isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : 'block';
+  document.getElementById('mercedesExtrasIcon').textContent = isOpen ? '▸' : '▾';
+}
+
+function expandMercedesExtras() {
+  document.getElementById('mercedesExtrasBody').style.display = 'block';
+  document.getElementById('mercedesExtrasIcon').textContent = '▾';
+}
+
 // ══ WERKSAUSSTATTUNG PDF UPLOAD ══
 var factoryPdf = null;
 var factoryPdfZone = document.getElementById('factoryPdfZone');
@@ -1083,6 +1106,7 @@ function generateInserat() {
         document.getElementById('finField').style.display = 'block';
         var isMercedes = merMatch && merMatch[1].toLowerCase() === 'ja';
         document.getElementById('lastvinHint').style.display = isMercedes ? 'flex' : 'none';
+        if (isMercedes) expandMercedesExtras();
       } else {
         document.getElementById('finField').style.display = 'none';
         document.getElementById('lastvinHint').style.display = 'none';
