@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AnzeigenAutopilot – KI-Assistent für Kleinanzeigen</title>
-<!-- build: 2026-07-06-1 -->
+<!-- build: 2026-07-06-2 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -257,6 +257,42 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
     <div class="preview-grid" id="previewGrid"></div>
 
     <hr class="divider">
+
+    <div class="field">
+      <label>Fahrzeugschein <span style="font-weight:400;opacity:.6">(optional – für präzisere Daten)</span></label>
+      <div class="upload-zone" id="fzsZone" style="padding:16px">
+        <input type="file" id="fzsInput" accept="image/*">
+        <div class="upload-icon" style="font-size:22px">📄</div>
+        <div class="upload-text"><strong>Zulassungsbescheinigung Teil I hochladen</strong><br>
+          <span style="font-size:12px;opacity:.6">Erstzulassung, Kraftstoffart, Typ & Farbe werden automatisch übernommen</span>
+        </div>
+      </div>
+      <div class="preview-grid" id="fzsPreview"></div>
+    </div>
+
+    <div class="field" id="finField" style="display:none">
+      <label>Fahrgestellnummer (FIN) <span style="font-weight:400;opacity:.6">erkannt aus Fahrzeugschein</span></label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="text" id="finValue" readonly style="flex:1">
+        <button class="btn btn-ghost" id="copyFinBtn" onclick="copyFin()" style="white-space:nowrap;font-size:12px;padding:8px 12px">Kopieren</button>
+      </div>
+      <div style="font-size:11px;opacity:.5;margin-top:4px">Die FIN wird nur lokal angezeigt und nicht gespeichert.</div>
+    </div>
+
+    <div class="onboard-bar" id="lastvinHint" style="display:none;margin-top:0">
+      🔎 <span><strong>Werksausstattung abrufen (nur Mercedes)</strong><br>
+      1. FIN kopieren → 2. Bei lastvin.com einfügen → 3. Ausstattungsliste zurückkopieren
+      <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-ghost" onclick="copyFin()" style="font-size:12px;padding:8px 12px">FIN kopieren</button>
+        <button class="btn btn-ghost" onclick="window.open('https://www.lastvin.com/','_blank')" style="font-size:12px;padding:8px 12px">lastvin.com öffnen</button>
+      </div>
+      </span>
+    </div>
+
+    <div class="field">
+      <label>Werksausstattung <span style="font-weight:400;opacity:.6">(optional einfügen, z.B. von lastvin.com)</span></label>
+      <textarea id="factoryEquipInput" rows="4" placeholder="Ausstattungsliste hier einfügen …" style="width:100%;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:12px;padding:12px;color:inherit;font-family:inherit;resize:vertical"></textarea>
+    </div>
 
     <div class="field">
       <label>Zustand / Hinweise <span style="font-weight:400;opacity:.6">(optional)</span></label>
@@ -811,6 +847,60 @@ function renderPreviews() {
   }
 }
 
+// ══ FAHRZEUGSCHEIN UPLOAD ══
+var fzsImage = null;
+var fzsZone = document.getElementById('fzsZone');
+fzsZone.addEventListener('dragover', function(e) { e.preventDefault(); this.classList.add('drag'); });
+fzsZone.addEventListener('dragleave', function() { this.classList.remove('drag'); });
+fzsZone.addEventListener('drop', function(e) { e.preventDefault(); this.classList.remove('drag'); handleFzsFile(e.dataTransfer.files[0]); });
+document.getElementById('fzsInput').addEventListener('change', function() { handleFzsFile(this.files[0]); });
+
+function handleFzsFile(file) {
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = new Image();
+    img.onload = function() {
+      var MAX = 1400; // Fahrzeugschein braucht mehr Auflösung zum Lesen / needs higher res to read text
+      var w = img.width, h = img.height;
+      if (w > MAX || h > MAX) {
+        if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+        else { w = Math.round(w * MAX / h); h = MAX; }
+      }
+      var canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      var compressed = canvas.toDataURL('image/jpeg', 0.80);
+      fzsImage = { base64: compressed.split(',')[1], type: 'image/jpeg', preview: compressed };
+      renderFzsPreview();
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function renderFzsPreview() {
+  var grid = document.getElementById('fzsPreview');
+  grid.innerHTML = '';
+  if (!fzsImage) return;
+  var div = document.createElement('div');
+  div.className = 'preview-item';
+  var img = document.createElement('img');
+  img.src = fzsImage.preview;
+  var btn = document.createElement('button');
+  btn.className = 'preview-remove';
+  btn.innerHTML = '&times;';
+  btn.onclick = function() { fzsImage = null; renderFzsPreview(); document.getElementById('finField').style.display = 'none'; document.getElementById('lastvinHint').style.display = 'none'; };
+  div.appendChild(img); div.appendChild(btn); grid.appendChild(div);
+}
+
+function copyFin() {
+  var fin = document.getElementById('finValue').value;
+  if (!fin) return;
+  toClipboard(fin);
+  setCopied('copyFinBtn');
+}
+
 function updateGenerateBtn() {
   var btn = document.getElementById('generateBtn');
   btn.disabled = !(CFG.sbUrl && CFG.sbKey && uploadedImages.length > 0 && currentCredits > 0);
@@ -846,15 +936,33 @@ function generateInserat() {
 
     var condition = document.getElementById('conditionInput').value;
     var price = document.getElementById('priceInput').value;
+    var factoryEquip = document.getElementById('factoryEquipInput').value;
 
     var blocks = [];
     for (var i = 0; i < uploadedImages.length; i++) {
       // Bilder auf max 800px reduzieren um Payload klein zu halten / Resize images to max 800px
       blocks.push({ type: 'image', source: { type: 'base64', media_type: uploadedImages[i].type, data: uploadedImages[i].base64 } });
     }
+    if (fzsImage) {
+      blocks.push({ type: 'image', source: { type: 'base64', media_type: fzsImage.type, data: fzsImage.base64 } });
+    }
 
     var prompt = 'Du bist ein erfahrener Kleinanzeigen-Experte. Analysiere die Fotos und erstelle ein optimales Inserat.\n\n';
     prompt += getPlatformInstructions() + '\n\n';
+    if (fzsImage) {
+      prompt += 'WICHTIG: Eines der Bilder ist eine Zulassungsbescheinigung Teil I (Fahrzeugschein). ';
+      prompt += 'Lies daraus folgende Werte exakt aus und nutze sie bevorzugt gegenüber Schätzungen aus den Fotos: ';
+      prompt += 'Erstzulassung (Feld B), Kraftstoffart (Feld P.3), genaue Typbezeichnung (Feld D.3), Farbe (Feld R), Schadstoffklasse (Feld 14). ';
+      prompt += 'Ignoriere Halterdaten (Name, Adresse) vollständig – diese dürfen nirgends im Ergebnis auftauchen.\n';
+      prompt += 'Lies außerdem die Fahrgestellnummer/FIN aus (Feld E, 17-stellig) und den Hersteller (Feld 2). ';
+      prompt += 'Prüfe, ob es sich um Mercedes-Benz, smart oder Mercedes-Maybach handelt (Herstellerfeld enthält "MERCEDES", "DAIMLER" oder die FIN beginnt mit WDB, WDD, WDC, WDF, W1K, W1N oder WMX).\n';
+      prompt += 'Gib diese Werte IMMER als letzten Block der Antwort in genau diesem Format aus, auch wenn manche Werte unbekannt sind:\n';
+      prompt += '6. FAHRZEUGDATEN:\nFIN: [FIN oder "unbekannt"]\nIST_MERCEDES: [ja oder nein]\n\n';
+    }
+    if (factoryEquip) {
+      prompt += 'WERKSAUSSTATTUNG (vom Nutzer bereitgestellt, z.B. von lastvin.com): ' + factoryEquip + '\n';
+      prompt += 'Berücksichtige diese Ausstattung im Beschreibungstext und im Preisvorschlag.\n\n';
+    }
     prompt += 'STRUKTUR DER AUSGABE:\n';
     prompt += '1. KATEGORIE: [z.B. "🎯 Oldtimer-Teil erkannt" oder "📱 Elektronik" oder "🛋️ Möbel"]\n';
     prompt += '2. TITEL: [optimierter Titel]\n';
@@ -893,6 +1001,24 @@ function generateInserat() {
       if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
       var text = (data.content && data.content[0]) ? data.content[0].text : '';
       if (!text) throw new Error('KI hat keinen Text zurückgegeben.');
+
+      // FIN + Mercedes-Erkennung parsen und aus dem sichtbaren Inserat entfernen
+      // Parse FIN + Mercedes detection and strip from visible listing text
+      var finMatch = text.match(/FIN:\s*([A-Z0-9]{11,17}|unbekannt)/i);
+      var merMatch = text.match(/IST_MERCEDES:\s*(ja|nein)/i);
+      if (finMatch && finMatch[1].toLowerCase() !== 'unbekannt') {
+        document.getElementById('finValue').value = finMatch[1].toUpperCase();
+        document.getElementById('finField').style.display = 'block';
+        var isMercedes = merMatch && merMatch[1].toLowerCase() === 'ja';
+        document.getElementById('lastvinHint').style.display = isMercedes ? 'flex' : 'none';
+      } else {
+        document.getElementById('finField').style.display = 'none';
+        document.getElementById('lastvinHint').style.display = 'none';
+      }
+      // Fahrzeugdaten-Block aus dem für den Kunden sichtbaren Text entfernen
+      // Remove Fahrzeugdaten block from customer-facing text
+      text = text.replace(/\n?6\.\s*FAHRZEUGDATEN:[\s\S]*$/i, '').trim();
+
       lastInseratRaw = text;
       var catMatch = text.match(/KATEGORIE:\s*(.+)/);
       if (catMatch) {
