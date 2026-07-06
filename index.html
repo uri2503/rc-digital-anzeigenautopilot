@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AnzeigenAutopilot – KI-Assistent für Kleinanzeigen</title>
-<!-- build: 2026-07-07-1 -->
+<!-- build: 2026-07-07-6 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -198,6 +198,8 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 <div class="tabs">
   <button class="tab-btn active" onclick="switchTab('inserat')">📝 Inserat-Generator</button>
   <button class="tab-btn" onclick="switchTab('autopilot')">🤖 Antwort-Autopilot</button>
+  <button class="tab-btn" onclick="switchTab('archiv')">📁 Archiv</button>
+  <button class="tab-btn" onclick="switchTab('board')">📋 Board</button>
   <button class="tab-btn" onclick="switchTab('settings')">⚙️ Einstellungen</button>
 </div>
 
@@ -211,7 +213,11 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
       🎁 <span>Du hast <strong>10 Gratis-Credits</strong> zum Starten. 1 Credit = 1 Inserat oder 3 Antworten.</span>
     </div>
 
-    <p class="section-title">Inserat erstellen</p>
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <p class="section-title" style="margin-bottom:0">Inserat erstellen</p>
+      <button class="btn btn-ghost" onclick="resetInseratForm()" style="font-size:13px;padding:8px 14px">🆕 Neues Inserat</button>
+    </div>
+    <div style="margin-bottom:14px"></div>
 
     <!-- MODE SWITCHER -->
     <div class="mode-switcher">
@@ -397,18 +403,6 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
       <textarea class="result-content" id="inseratText" rows="18" style="width:100%;background:transparent;border:none;resize:vertical;outline:none;font-family:inherit;padding:0"></textarea>
     </div>
 
-    <div class="result-box" id="fillHelpResult">
-      <div class="result-header">
-        <span class="result-label">Ausfüllhilfe Kleinanzeigen</span>
-        <div class="result-actions">
-          <button class="btn btn-copy" id="copyFillHelpBtn" onclick="copyFillHelp()">Alles kopieren</button>
-        </div>
-      </div>
-      <div style="font-size:11px;opacity:.6;margin-bottom:10px">Werte bei Bedarf korrigieren, dann 📋 zum Kopieren antippen</div>
-      <div style="font-size:11px;opacity:.5;margin-bottom:10px">Vor dem Generieren kannst du Fahrzeugdetails auch selbst angeben, dann muss die KI nicht raten.</div>
-      <div id="fillHelpList"></div>
-    </div>
-
     <div id="marketCheckBox" style="display:none;margin-top:14px">
       <button class="btn btn-primary" id="marketCheckBtn" onclick="checkMarketPrice()" style="width:100%;background:var(--surface);border:2px solid var(--amber);color:var(--amber);font-size:15px;font-weight:800">
         🔍 Marktpreis-Check <span style="opacity:.7;font-size:12px;font-weight:500">(2 Credits) – was verlangt die Konkurrenz gerade?</span>
@@ -421,6 +415,18 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
         </div>
         <div id="marketResultContent" style="font-size:14px;line-height:1.6"></div>
       </div>
+    </div>
+
+    <div class="result-box" id="fillHelpResult">
+      <div class="result-header">
+        <span class="result-label">Ausfüllhilfe Kleinanzeigen</span>
+        <div class="result-actions">
+          <button class="btn btn-copy" id="copyFillHelpBtn" onclick="copyFillHelp()">Alles kopieren</button>
+        </div>
+      </div>
+      <div style="font-size:11px;opacity:.6;margin-bottom:10px">Werte bei Bedarf korrigieren, dann 📋 zum Kopieren antippen</div>
+      <div style="font-size:11px;opacity:.5;margin-bottom:10px">Vor dem Generieren kannst du Fahrzeugdetails auch selbst angeben, dann muss die KI nicht raten.</div>
+      <div id="fillHelpList"></div>
     </div>
 
     <div id="finalActions" style="display:none">
@@ -549,6 +555,77 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
     </div>
   </div>
 
+  <!-- ══ TAB: ARCHIV ══ -->
+  <div class="tab-panel" id="tab-archiv">
+    <p class="section-title">Deine gespeicherten Anzeigen</p>
+    <div style="font-size:13px;opacity:.6;margin-bottom:18px">Bleiben auf diesem Gerät gespeichert (max. 20) – nützlich für Verlängerungen oder erneutes Einstellen.</div>
+    <div id="archivList"></div>
+    <div id="archivEmpty" style="display:none;text-align:center;padding:40px 20px;opacity:.5;font-size:14px">Noch keine Anzeigen gespeichert.</div>
+  </div>
+
+  <!-- ══ TAB: BOARD ══ -->
+  <div class="tab-panel" id="tab-board">
+    <p class="section-title">Anzeigen-Board</p>
+    <div style="font-size:13px;opacity:.6;margin-bottom:18px">Behalte den Überblick über alle laufenden Anzeigen – auf jeder Plattform, egal ob mit KI erstellt oder komplett manuell (z.B. Hausflohmarkt).</div>
+
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;margin-bottom:20px">
+      <div style="font-weight:700;font-size:14px;margin-bottom:12px">➕ Neuer Eintrag</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div class="field" style="margin-bottom:0;grid-column:1/-1">
+          <label>Titel</label>
+          <input type="text" id="boardTitel" placeholder="z.B. Mercedes C200 Kompressor">
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label>Plattform</label>
+          <select id="boardPlattform">
+            <option>Kleinanzeigen</option>
+            <option>eBay</option>
+            <option>mobile.de</option>
+            <option>AutoScout24</option>
+            <option>Hausflohmarkt/Sonstiges</option>
+          </select>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label>Preis €</label>
+          <input type="number" id="boardPreis" placeholder="z.B. 1500" min="0">
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label>Eingestellt am</label>
+          <input type="date" id="boardDatum">
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label>Status</label>
+          <select id="boardStatus">
+            <option>Aktiv</option>
+            <option>Reserviert</option>
+            <option>Verkauft</option>
+            <option>Abgelaufen/Beendet</option>
+          </select>
+        </div>
+        <div class="field" style="margin-bottom:0;grid-column:1/-1">
+          <label>Link zur Anzeige <span style="font-weight:400;opacity:.6">(optional)</span></label>
+          <input type="text" id="boardLink" placeholder="https://…">
+        </div>
+        <div class="field" style="margin-bottom:0;grid-column:1/-1">
+          <label>Notiz <span style="font-weight:400;opacity:.6">(optional)</span></label>
+          <input type="text" id="boardNotiz" placeholder="z.B. Verlängerung nötig ab, Käufer-Kontakt …">
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="addBoardEntry()" style="width:100%">Eintrag hinzufügen</button>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap" id="boardFilterBar">
+      <button class="plat-tab active" onclick="filterBoard('alle')" id="boardFilter-alle">Alle</button>
+      <button class="plat-tab" onclick="filterBoard('Aktiv')" id="boardFilter-Aktiv">Aktiv</button>
+      <button class="plat-tab" onclick="filterBoard('Reserviert')" id="boardFilter-Reserviert">Reserviert</button>
+      <button class="plat-tab" onclick="filterBoard('Verkauft')" id="boardFilter-Verkauft">Verkauft</button>
+      <button class="plat-tab" onclick="filterBoard('Abgelaufen/Beendet')" id="boardFilter-Abgelaufen/Beendet">Abgelaufen</button>
+    </div>
+
+    <div id="boardList"></div>
+    <div id="boardEmpty" style="display:none;text-align:center;padding:40px 20px;opacity:.5;font-size:14px">Noch keine Anzeigen im Board. Trage oben deine erste ein.</div>
+  </div>
+
   <!-- ══ TAB 3: EINSTELLUNGEN ══ -->
   <div class="tab-panel" id="tab-settings">
     <p class="section-title">API & Konfiguration</p>
@@ -597,6 +674,9 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 <!-- ══ MODAL: CREDITS KAUFEN ══ -->
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal">
+    <div id="modalCreditWarning" style="display:none;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.4);color:#f87171;border-radius:var(--radius-sm);padding:12px 14px;font-size:13px;font-weight:600;margin-bottom:14px">
+      ⚠️ Achtung: Deine Credits sind aufgebraucht.
+    </div>
     <div class="modal-title">⚡ Credits aufladen</div>
     <div class="modal-sub">Keine Abos. Kein Verfallsdatum. Einfach kaufen und losarbeiten.</div>
 
@@ -767,7 +847,7 @@ function deductCredit(amount, callback) {
 
   if (amount >= 1) {
     // Ganze Credits (1, 2, ...)
-    if (currentCredits < amount) { openModal(); return false; }
+    if (currentCredits < amount) { openModal('empty'); return false; }
     currentCredits = currentCredits - amount;
     updateCreditDisplay();
     syncCredits(bid, -amount);
@@ -777,7 +857,7 @@ function deductCredit(amount, callback) {
     // Antwort: sammle 3, dann 1 Credit
     replyUsageAccum = replyUsageAccum + 1;
     if (replyUsageAccum >= 3) {
-      if (currentCredits < 1) { openModal(); return false; }
+      if (currentCredits < 1) { openModal('empty'); return false; }
       replyUsageAccum = 0;
       currentCredits = currentCredits - 1;
       updateCreditDisplay();
@@ -855,7 +935,11 @@ function checkout(paket) {
 }
 
 // ══ MODAL ══
-function openModal() { document.getElementById('modalOverlay').classList.add('show'); }
+function openModal(reason) {
+  var warn = document.getElementById('modalCreditWarning');
+  if (warn) warn.style.display = reason === 'empty' ? 'block' : 'none';
+  document.getElementById('modalOverlay').classList.add('show');
+}
 function closeModal() { document.getElementById('modalOverlay').classList.remove('show'); }
 document.getElementById('modalOverlay').addEventListener('click', function(e) {
   if (e.target === this) closeModal();
@@ -863,7 +947,7 @@ document.getElementById('modalOverlay').addEventListener('click', function(e) {
 
 // ══ TABS ══
 function switchTab(tab) {
-  var ids = ['inserat', 'autopilot', 'settings'];
+  var ids = ['inserat', 'autopilot', 'archiv', 'board', 'settings'];
   var panels = document.querySelectorAll('.tab-panel');
   var btns = document.querySelectorAll('.tab-btn');
   for (var i = 0; i < ids.length; i++) {
@@ -873,6 +957,8 @@ function switchTab(tab) {
   document.getElementById('tab-' + tab).classList.add('active');
   var idx = ids.indexOf(tab);
   btns[idx].classList.add('active');
+  if (tab === 'archiv') renderArchivList();
+  if (tab === 'board') renderBoardList();
 }
 
 // ══ PLATFORM ══
@@ -1014,6 +1100,55 @@ function toggleVehicleDetails() {
   var isOpen = body.style.display !== 'none';
   body.style.display = isOpen ? 'none' : 'block';
   document.getElementById('vehicleDetailsIcon').textContent = isOpen ? '▸' : '▾';
+}
+
+// ══ NEUES INSERAT (kompletter Reset) ══
+function resetInseratForm() {
+  if (!confirm('Neues Inserat starten? Alle aktuellen Eingaben und das Ergebnis werden geleert. (Bereits gespeicherte Anzeigen im Archiv bleiben erhalten.)')) return;
+
+  // Fotos, Fahrzeugschein, Werksausstattungs-PDF zurücksetzen
+  uploadedImages = [];
+  renderPreviews();
+  fzsImage = null;
+  renderFzsPreview();
+  factoryPdf = null;
+  document.getElementById('factoryPdfInput').value = '';
+  document.getElementById('factoryPdfName').style.display = 'none';
+  document.getElementById('factoryEquipInput').value = '';
+  document.getElementById('factoryEquipInput').placeholder = '… oder Ausstattungsliste als Text hier einfügen';
+
+  // FIN / Mercedes-Bereich
+  document.getElementById('finField').style.display = 'none';
+  document.getElementById('lastvinHint').style.display = 'none';
+  document.getElementById('mercedesExtrasBody').style.display = 'none';
+  document.getElementById('mercedesExtrasIcon').textContent = '▸';
+
+  // Fahrzeugdetails-Felder
+  ['vdMarke','vdModell','vdErstzulassung','vdKm','vdHu','vdPs'].forEach(function(id) { document.getElementById(id).value = ''; });
+  ['vdGetriebe','vdKraftstoff','vdFahrzeugtyp','vdTueren','vdFarbe','vdMaterial','vdPlakette','vdSchadstoff','vdZustand'].forEach(function(id) { document.getElementById(id).value = ''; });
+  document.getElementById('vehicleDetailsBody').style.display = 'none';
+  document.getElementById('vehicleDetailsIcon').textContent = '▸';
+
+  // Zustand, Preis, Plattform
+  document.getElementById('conditionInput').value = '';
+  document.getElementById('priceInput').value = '';
+  selectPlat('ka');
+
+  // Ergebnis-Bereiche
+  document.getElementById('inseratText').value = '';
+  lastInseratRaw = '';
+  document.getElementById('inseratResult').classList.remove('show');
+  document.getElementById('catChip').classList.remove('show');
+  document.getElementById('finalActions').style.display = 'none';
+  document.getElementById('marketCheckBox').style.display = 'none';
+  document.getElementById('marketResult').classList.remove('show');
+  document.getElementById('marketResultContent').innerHTML = '';
+  document.getElementById('fillHelpResult').classList.remove('show');
+  document.getElementById('fillHelpList').innerHTML = '';
+  lastMarketQuery = '';
+
+  updateGenerateBtn();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // ══ WERKSAUSSTATTUNG PDF UPLOAD ══
@@ -1279,7 +1414,7 @@ function buildMarketQuery() {
 }
 
 function checkMarketPrice() {
-  if (currentCredits < 2) { openModal(); return; }
+  if (currentCredits < 2) { openModal('empty'); return; }
   var query = lastMarketQuery || buildMarketQuery();
   if (!query) { alert('Konnte keine Fahrzeugbezeichnung für die Suche ermitteln.'); return; }
 
@@ -1532,11 +1667,38 @@ function saveInseratToList(text) {
   var titM = text.match(/TITEL[:\s]*\n?[`']?([^\n`']+)[`']?/);
   var titel = titM ? titM[1].trim() : text.substring(0, 50);
   var id = 'ins_' + Date.now();
+
+  // Ausfüllhilfe-Werte mitspeichern, falls vorhanden
+  // Also save fill-help values, if present
+  var fillInputs = document.querySelectorAll('#fillHelpList input');
+  var fillLines = [];
+  fillInputs.forEach(function(inp) { fillLines.push(inp.dataset.label + ': ' + inp.value); });
+
   var inserate = getSavedInserate();
-  inserate.unshift({ id: id, titel: titel, text: text, datum: new Date().toLocaleDateString('de-DE') });
+  inserate.unshift({ id: id, titel: titel, text: text, fillHelp: fillLines.join('\n'), datum: new Date().toLocaleDateString('de-DE') });
   if (inserate.length > 20) inserate = inserate.slice(0, 20); // max 20
   localStorage.setItem('tp_inserate', JSON.stringify(inserate));
   renderInseratDropdown();
+
+  // Automatisch als "Aktiv" ins Board übernehmen
+  // Automatically take over into board as "Aktiv"
+  addBoardEntryAuto(titel, document.getElementById('priceInput').value);
+}
+
+function addBoardEntryAuto(titel, preis) {
+  var entry = {
+    id: 'board_' + Date.now(),
+    titel: titel,
+    plattform: currentPlat === 'ebay' ? 'eBay' : 'Kleinanzeigen',
+    preis: preis || '',
+    datum: new Date().toISOString().substring(0, 10),
+    status: 'Aktiv',
+    link: '',
+    notiz: ''
+  };
+  var entries = getBoardEntries();
+  entries.unshift(entry);
+  saveBoardEntries(entries);
 }
 
 function renderInseratDropdown() {
@@ -1573,6 +1735,265 @@ function deleteSelectedInserat() {
   document.getElementById('artikelContext').value = '';
   renderInseratDropdown();
 }
+
+// ══ ARCHIV-TAB ══
+function renderArchivList() {
+  var list = document.getElementById('archivList');
+  var empty = document.getElementById('archivEmpty');
+  var inserate = getSavedInserate();
+  list.innerHTML = '';
+
+  if (inserate.length === 0) { empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+
+  inserate.forEach(function(ins) {
+    var card = document.createElement('div');
+    card.style.cssText = 'background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;margin-bottom:12px';
+
+    var head = document.createElement('div');
+    head.style.cssText = 'display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px';
+    head.innerHTML = '<div><div style="font-weight:700;font-size:14px">' + ins.titel + '</div><div style="font-size:12px;opacity:.5;margin-top:2px">' + ins.datum + '</div></div>';
+
+    var actions = document.createElement('div');
+    actions.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;flex:0 0 auto';
+
+    var viewBtn = document.createElement('button');
+    viewBtn.className = 'btn btn-ghost';
+    viewBtn.textContent = '👁️';
+    viewBtn.title = 'Anzeigen';
+    viewBtn.style.cssText = 'font-size:12px;padding:6px 10px';
+    viewBtn.onclick = function() { toggleArchivDetail(card, ins); };
+
+    var pdfBtn = document.createElement('button');
+    pdfBtn.className = 'btn btn-ghost';
+    pdfBtn.textContent = '📄 PDF';
+    pdfBtn.style.cssText = 'font-size:12px;padding:6px 10px';
+    pdfBtn.onclick = function() { exportArchivPdf(ins); };
+
+    var delBtn = document.createElement('button');
+    delBtn.className = 'btn btn-ghost';
+    delBtn.textContent = '🗑️';
+    delBtn.title = 'Löschen';
+    delBtn.style.cssText = 'font-size:12px;padding:6px 10px';
+    delBtn.onclick = function() {
+      if (!confirm('Diese gespeicherte Anzeige wirklich löschen?')) return;
+      var updated = getSavedInserate().filter(function(x) { return x.id !== ins.id; });
+      localStorage.setItem('tp_inserate', JSON.stringify(updated));
+      renderArchivList();
+      renderInseratDropdown();
+    };
+
+    actions.appendChild(viewBtn); actions.appendChild(pdfBtn); actions.appendChild(delBtn);
+    head.appendChild(actions);
+    card.appendChild(head);
+    list.appendChild(card);
+  });
+}
+
+function toggleArchivDetail(card, ins) {
+  var existing = card.querySelector('.archiv-detail');
+  if (existing) { existing.remove(); return; }
+  var detail = document.createElement('div');
+  detail.className = 'archiv-detail';
+  detail.style.cssText = 'margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:13px;line-height:1.6;white-space:pre-wrap';
+  detail.textContent = ins.text + (ins.fillHelp ? '\n\n---\nFahrzeugdaten:\n' + ins.fillHelp : '');
+  card.appendChild(detail);
+}
+
+function exportArchivPdf(ins) {
+  var win = window.open('', '_blank');
+  win.document.write('<html><head><title>' + ins.titel + '</title><style>');
+  win.document.write('body{font-family:Arial,sans-serif;max-width:700px;margin:40px auto;padding:0 20px;color:#111;line-height:1.7}');
+  win.document.write('h1{font-size:18px;border-bottom:2px solid #f59e0b;padding-bottom:8px;margin-bottom:20px}');
+  win.document.write('pre{white-space:pre-wrap;font-family:inherit;font-size:14px}');
+  win.document.write('.footer{margin-top:40px;font-size:11px;color:#999;border-top:1px solid #eee;padding-top:10px}');
+  win.document.write('@media print{.no-print{display:none}}');
+  win.document.write('</style></head><body>');
+  win.document.write('<h1>' + ins.titel + '</h1>');
+  win.document.write('<div style="font-size:12px;color:#888;margin-bottom:16px">Gespeichert am ' + ins.datum + '</div>');
+  win.document.write('<pre>' + ins.text.replace(/</g, '&lt;') + '</pre>');
+  if (ins.fillHelp) {
+    win.document.write('<h1 style="margin-top:30px">Fahrzeugdaten</h1>');
+    win.document.write('<pre>' + ins.fillHelp.replace(/</g, '&lt;') + '</pre>');
+  }
+  win.document.write('<div class="footer">Erstellt mit AnzeigenAutopilot · anzeigenautopilot.de</div>');
+  win.document.write('</body></html>');
+  win.document.close();
+}
+
+// ══ BOARD (Supabase, geräteübergreifend über Browser-ID) ══
+var boardFilterState = 'alle';
+var boardCache = []; // lokaler Zwischenspeicher für Rendering, kein Speicherort
+
+function getBoardEntries(callback) {
+  var bid = getBrowserId();
+  if (!CFG.sbUrl || !CFG.sbKey) { callback([]); return; }
+  fetch(CFG.sbUrl + '/rest/v1/teilepilot_board?browser_id=eq.' + encodeURIComponent(bid) + '&order=created_at.desc', {
+    headers: sbHeaders()
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) { callback(Array.isArray(data) ? data : []); })
+  .catch(function() { callback([]); });
+}
+
+function addBoardEntry() {
+  var titel = document.getElementById('boardTitel').value.trim();
+  if (!titel) { alert('Bitte einen Titel eingeben.'); return; }
+  var bid = getBrowserId();
+
+  var entry = {
+    browser_id: bid,
+    titel: titel,
+    plattform: document.getElementById('boardPlattform').value,
+    preis: document.getElementById('boardPreis').value,
+    eingestellt_am: document.getElementById('boardDatum').value || new Date().toISOString().substring(0, 10),
+    status: document.getElementById('boardStatus').value,
+    link: document.getElementById('boardLink').value.trim(),
+    notiz: document.getElementById('boardNotiz').value.trim()
+  };
+
+  fetch(CFG.sbUrl + '/rest/v1/teilepilot_board', {
+    method: 'POST',
+    headers: sbHeaders(),
+    body: JSON.stringify(entry)
+  })
+  .then(function() {
+    document.getElementById('boardTitel').value = '';
+    document.getElementById('boardPreis').value = '';
+    document.getElementById('boardDatum').value = '';
+    document.getElementById('boardLink').value = '';
+    document.getElementById('boardNotiz').value = '';
+    document.getElementById('boardPlattform').value = 'Kleinanzeigen';
+    document.getElementById('boardStatus').value = 'Aktiv';
+    renderBoardList();
+  })
+  .catch(function() { alert('Eintrag konnte nicht gespeichert werden. Bitte erneut versuchen.'); });
+}
+
+function addBoardEntryAuto(titel, preis) {
+  var bid = getBrowserId();
+  var entry = {
+    browser_id: bid,
+    titel: titel,
+    plattform: currentPlat === 'ebay' ? 'eBay' : 'Kleinanzeigen',
+    preis: preis || '',
+    eingestellt_am: new Date().toISOString().substring(0, 10),
+    status: 'Aktiv',
+    link: '',
+    notiz: ''
+  };
+  if (!CFG.sbUrl || !CFG.sbKey) return;
+  fetch(CFG.sbUrl + '/rest/v1/teilepilot_board', {
+    method: 'POST',
+    headers: sbHeaders(),
+    body: JSON.stringify(entry)
+  }).catch(function() {});
+}
+
+function filterBoard(status) {
+  boardFilterState = status;
+  ['alle','Aktiv','Reserviert','Verkauft','Abgelaufen/Beendet'].forEach(function(s) {
+    var btn = document.getElementById('boardFilter-' + s);
+    if (btn) btn.classList.toggle('active', s === status);
+  });
+  renderBoardList();
+}
+
+var BOARD_STATUS_COLORS = {
+  'Aktiv': '#22c55e',
+  'Reserviert': '#f59e0b',
+  'Verkauft': '#60a5fa',
+  'Abgelaufen/Beendet': '#94a3b8'
+};
+
+var BOARD_PLATTFORM_ICONS = {
+  'Kleinanzeigen': '📱',
+  'eBay': '🛒',
+  'mobile.de': '🚗',
+  'AutoScout24': '🔍',
+  'Hausflohmarkt/Sonstiges': '🏠'
+};
+
+function renderBoardList() {
+  var list = document.getElementById('boardList');
+  var empty = document.getElementById('boardEmpty');
+  list.innerHTML = '<div style="text-align:center;padding:20px;opacity:.5;font-size:13px">Lädt …</div>';
+  empty.style.display = 'none';
+
+  getBoardEntries(function(entries) {
+    boardCache = entries;
+    var shown = boardFilterState !== 'alle' ? entries.filter(function(e) { return e.status === boardFilterState; }) : entries;
+
+    list.innerHTML = '';
+
+    if (shown.length === 0) { empty.style.display = 'block'; return; }
+    empty.style.display = 'none';
+
+    shown.forEach(function(entry) {
+      var card = document.createElement('div');
+      card.style.cssText = 'background:var(--bg);border:1px solid var(--border);border-left:3px solid ' + (BOARD_STATUS_COLORS[entry.status] || 'var(--border)') + ';border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:10px';
+
+      var top = document.createElement('div');
+      top.style.cssText = 'display:flex;justify-content:space-between;align-items:flex-start;gap:10px';
+
+      var left = document.createElement('div');
+      left.innerHTML = '<div style="font-weight:700;font-size:14px">' + (BOARD_PLATTFORM_ICONS[entry.plattform] || '') + ' ' + entry.titel + '</div>' +
+        '<div style="font-size:12px;opacity:.6;margin-top:3px">' + entry.plattform + (entry.preis ? ' · ' + entry.preis + ' €' : '') + ' · seit ' + entry.eingestellt_am + '</div>' +
+        (entry.notiz ? '<div style="font-size:12px;opacity:.5;margin-top:4px">📝 ' + entry.notiz + '</div>' : '');
+
+      var right = document.createElement('div');
+      right.style.cssText = 'flex:0 0 auto;text-align:right';
+
+      var statusSelect = document.createElement('select');
+      statusSelect.style.cssText = 'background:var(--surface);border:1px solid var(--border);color:' + (BOARD_STATUS_COLORS[entry.status] || 'var(--text)') + ';font-weight:700;font-size:12px;padding:5px 8px;border-radius:8px;margin-bottom:6px';
+      ['Aktiv','Reserviert','Verkauft','Abgelaufen/Beendet'].forEach(function(s) {
+        var opt = document.createElement('option');
+        opt.value = s; opt.textContent = s;
+        if (s === entry.status) opt.selected = true;
+        statusSelect.appendChild(opt);
+      });
+      statusSelect.onchange = function() {
+        fetch(CFG.sbUrl + '/rest/v1/teilepilot_board?id=eq.' + entry.id, {
+          method: 'PATCH',
+          headers: sbHeaders(),
+          body: JSON.stringify({ status: statusSelect.value, updated_at: new Date().toISOString() })
+        }).then(function() { renderBoardList(); })
+          .catch(function() { alert('Status konnte nicht aktualisiert werden.'); });
+      };
+
+      var delBtn = document.createElement('button');
+      delBtn.className = 'btn btn-ghost';
+      delBtn.textContent = '🗑️';
+      delBtn.style.cssText = 'font-size:12px;padding:5px 8px;display:block;margin-left:auto';
+      delBtn.onclick = function() {
+        if (!confirm('Diesen Board-Eintrag wirklich löschen?')) return;
+        fetch(CFG.sbUrl + '/rest/v1/teilepilot_board?id=eq.' + entry.id, {
+          method: 'DELETE',
+          headers: sbHeaders()
+        }).then(function() { renderBoardList(); })
+          .catch(function() { alert('Eintrag konnte nicht gelöscht werden.'); });
+      };
+
+      right.appendChild(statusSelect);
+      right.appendChild(delBtn);
+      top.appendChild(left);
+      top.appendChild(right);
+      card.appendChild(top);
+
+      if (entry.link) {
+        var linkBtn = document.createElement('button');
+        linkBtn.className = 'btn btn-ghost';
+        linkBtn.textContent = 'Anzeige öffnen ↗';
+        linkBtn.style.cssText = 'font-size:12px;padding:6px 10px;margin-top:10px';
+        linkBtn.onclick = function() { window.open(entry.link, '_blank'); };
+        card.appendChild(linkBtn);
+      }
+
+      list.appendChild(card);
+    });
+  });
+}
+
 
 // ══ RULES ══
 function saveRules() {
