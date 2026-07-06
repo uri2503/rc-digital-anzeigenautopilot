@@ -587,30 +587,20 @@ function initCredits() {
   }
 
   var bid = getBrowserId();
-  // Prüfe ob schon vorhanden
-  fetch(CFG.sbUrl + '/rest/v1/teilepilot_credits?browser_id=eq.' + encodeURIComponent(bid) + '&select=*', {
-    headers: sbHeaders()
+  // Anlage/Abruf laeuft ueber Edge Function (teilepilot-init-credits), damit neue
+  // Gratis-Konten IP-seitig begrenzt werden koennen -- verhindert unbegrenztes
+  // Farmen von 10-Credit-Startguthaben per localStorage.clear().
+  fetch(CFG.sbUrl + '/functions/v1/teilepilot-init-credits', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ browser_id: bid })
   })
   .then(function(r) { return r.json(); })
   .then(function(data) {
-    if (data && data.length > 0) {
-      currentCredits = data[0].credits;
-      updateCreditDisplay();
-      // Onboard-Bar verstecken wenn schon bekannter User
-      var ob = document.getElementById('onboardBar');
-      if (ob && data[0].credits_used > 0) ob.classList.add('hide');
-    } else {
-      // Neu anlegen mit 10 Gratis-Credits
-      fetch(CFG.sbUrl + '/rest/v1/teilepilot_credits', {
-        method: 'POST',
-        headers: sbHeaders(),
-        body: JSON.stringify({ browser_id: bid, credits: 10 })
-      })
-      .then(function() {
-        currentCredits = 10;
-        updateCreditDisplay();
-      });
-    }
+    currentCredits = data.credits || 0;
+    updateCreditDisplay();
+    var ob = document.getElementById('onboardBar');
+    if (ob && data.credits_used > 0) ob.classList.add('hide');
   })
   .catch(function() {
     // Fallback localStorage
