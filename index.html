@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AnzeigenAutopilot – KI-Assistent für Kleinanzeigen</title>
-<!-- build: 2026-07-06-6 -->
+<!-- build: 2026-07-06-7 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -318,6 +318,18 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
     </div>
     <div id="vehicleDetailsBody" style="display:none">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div class="field" style="margin-bottom:0">
+          <label>Marke</label>
+          <input type="text" id="vdMarke" placeholder="z.B. Mercedes-Benz">
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label>Modell</label>
+          <input type="text" id="vdModell" placeholder="z.B. C 200 Kompressor">
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label>Erstzulassung</label>
+          <input type="text" id="vdErstzulassung" placeholder="z.B. 02/2002">
+        </div>
         <div class="field" style="margin-bottom:0">
           <label>Kilometerstand</label>
           <input type="number" id="vdKm" placeholder="z.B. 85000" min="0">
@@ -1075,6 +1087,9 @@ function generateInserat() {
     var factoryEquip = document.getElementById('factoryEquipInput').value;
 
     var vd = {
+      marke: document.getElementById('vdMarke').value,
+      modell: document.getElementById('vdModell').value,
+      erstzulassung: document.getElementById('vdErstzulassung').value,
       km: document.getElementById('vdKm').value,
       hu: document.getElementById('vdHu').value,
       getriebe: document.getElementById('vdGetriebe').value,
@@ -1124,6 +1139,9 @@ function generateInserat() {
     }
     if (vdFilled.length > 0) {
       prompt += 'VERBINDLICHE FAHRZEUGDATEN (vom Nutzer selbst angegeben – diese Werte MÜSSEN exakt so übernommen werden, NICHT schätzen oder abweichen):\n';
+      if (vd.marke) prompt += 'Marke: ' + vd.marke + '\n';
+      if (vd.modell) prompt += 'Modell: ' + vd.modell + '\n';
+      if (vd.erstzulassung) prompt += 'Erstzulassung: ' + vd.erstzulassung + '\n';
       if (vd.km) prompt += 'Kilometerstand: ' + vd.km + '\n';
       if (vd.hu) prompt += 'HU bis: ' + vd.hu + '\n';
       if (vd.getriebe) prompt += 'Getriebe: ' + vd.getriebe + '\n';
@@ -1150,6 +1168,8 @@ function generateInserat() {
 
     prompt += 'FALLS ES SICH UM EIN FAHRZEUG (Auto) HANDELT, gib zusätzlich ganz am Ende einen 7. Block aus:\n';
     prompt += '7. AUSFUELLHILFE:\n';
+    prompt += 'Marke: [z.B. Mercedes-Benz oder "unbekannt"]\n';
+    prompt += 'Modell: [z.B. C 200 Kompressor oder "unbekannt"]\n';
     prompt += 'Kilometerstand: [Zahl oder "unbekannt"]\n';
     prompt += 'Fahrzeugzustand: [genau eines von: Beschädigtes Fahrzeug | Unbeschädigtes Fahrzeug]\n';
     prompt += 'Erstzulassung: [Monat Jahr, z.B. "Februar 2002" oder "unbekannt"]\n';
