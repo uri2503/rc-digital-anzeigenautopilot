@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AnzeigenAutopilot – KI-Assistent für Kleinanzeigen</title>
-<!-- build: 2026-07-06-8 -->
+<!-- build: 2026-07-06-9 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -409,9 +409,13 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
       <div id="fillHelpList"></div>
     </div>
 
-    <button class="btn btn-primary" id="copyEverythingBtn" onclick="copyEverything()" style="display:none;margin-top:14px;width:100%;background:#22c55e;color:#000;font-size:16px;font-weight:800">
-      📋 Alles kopieren — fertig für Kleinanzeigen
-    </button>
+    <div id="finalActions" style="display:none">
+      <button class="btn btn-primary" id="copyEverythingBtn" onclick="copyEverything()" style="margin-top:14px;width:100%;background:#22c55e;color:#000;font-size:16px;font-weight:800">
+        📋 Alles kopieren — fertig für Kleinanzeigen
+      </button>
+      <div style="font-size:12px;opacity:.6;margin-top:8px;text-align:center">Text in die Beschreibung einfügen, kurz überfliegen und nach eigenem Ermessen anpassen.</div>
+      <button onclick="window.open('https://www.kleinanzeigen.de/p-anzeige-aufgeben.html','_blank')" style="width:100%;background:transparent;border:1px solid var(--border);color:var(--text-dim);font-size:13px;border-radius:var(--radius-sm);padding:10px;cursor:pointer;margin-top:10px">Kleinanzeigen öffnen ↗</button>
+    </div>
     </div><!-- /panelKI -->
 
     <!-- ── PANEL BAUSTEINE ── -->
@@ -1047,7 +1051,7 @@ function generateInserat() {
     var btn = document.getElementById('generateBtn');
     btn.disabled = true;
     document.getElementById('generateBtnIcon').innerHTML = '<span class="spinner"></span>';
-    document.getElementById('copyEverythingBtn').style.display = 'none';
+    document.getElementById('finalActions').style.display = 'none';
     // Ladebalken einblenden / Show progress bar
     var prog = document.getElementById('kiProgress');
     var progBar = document.getElementById('kiProgressBar');
@@ -1225,7 +1229,7 @@ function generateInserat() {
       }
       document.getElementById('inseratText').value = text;
       document.getElementById('inseratResult').classList.add('show');
-      document.getElementById('copyEverythingBtn').style.display = 'block';
+      document.getElementById('finalActions').style.display = 'block';
       saveInseratToList(text); // Inserat in Liste speichern / Save listing to list
       resetBtn();
       document.getElementById('copyEverythingBtn').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -1626,7 +1630,7 @@ loadConfig();
 loadRules();
 initCredits();
 checkStripeSuccess();
-document.getElementById('copyEverythingBtn').style.display = 'none';
+document.getElementById('finalActions').style.display = 'none';
 document.getElementById('inseratResult').classList.remove('show');
 renderInseratDropdown();
 
