@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AnzeigenAutopilot – KI-Assistent für Kleinanzeigen</title>
-<!-- build: 2026-07-07-9 -->
+<!-- build: 2026-07-08-1 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -220,16 +220,80 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
     <div style="margin-bottom:14px"></div>
 
     <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;margin-bottom:20px">
-      <div style="font-weight:700;font-size:14px;margin-bottom:6px">🔍 Erst den Markt checken? <span style="font-weight:400;opacity:.6;font-size:12px">(optional, 2 Credits)</span></div>
-      <div style="font-size:12px;opacity:.6;margin-bottom:12px">Wenn du vor dem Inserieren ein Gefühl für den aktuellen Markt bekommen willst – z.B. ob er gerade überfüllt ist und sich dein Wunschpreis kaum durchsetzen lässt – lohnt sich dieser Check, bevor du überhaupt Fotos hochlädst. Je genauer deine Angaben, desto präziser die Analyse.</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
-        <input type="text" id="preCheckMarke" placeholder="Marke, z.B. Porsche" style="background:var(--surface);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:var(--radius-sm);font-size:14px">
-        <input type="text" id="preCheckModell" placeholder="Modell, z.B. Cayenne 4.8" style="background:var(--surface);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:var(--radius-sm);font-size:14px">
-        <input type="text" id="preCheckBaujahr" placeholder="Baujahr, z.B. 2008" style="background:var(--surface);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:var(--radius-sm);font-size:14px">
-        <input type="text" id="preCheckKm" placeholder="Kilometerstand, z.B. 200000" style="background:var(--surface);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:var(--radius-sm);font-size:14px">
-        <input type="text" id="preCheckZustand" placeholder="Zustand/Besonderheiten, z.B. Tauschmotor 70.000 km" style="grid-column:1/-1;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:var(--radius-sm);font-size:14px">
-        <input type="number" id="preCheckPreis" placeholder="Wunschpreis € (optional)" style="grid-column:1/-1;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:var(--radius-sm);font-size:14px" min="0">
+      <div style="font-weight:700;font-size:14px;margin-bottom:6px">Fahrzeugdetails</div>
+      <div style="font-size:12px;opacity:.6;margin-bottom:16px">Je genauer deine Angaben, desto präziser der Marktcheck und desto weniger muss die KI später beim Inserat raten. Nur Marke/Modell sind für den Marktcheck nötig, alles andere ist optional.</div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+        <div class="field" style="margin-bottom:0">
+          <label>Marke</label>
+          <input type="text" id="vdMarke" placeholder="z.B. Porsche">
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label>Modell</label>
+          <input type="text" id="vdModell" placeholder="z.B. Cayenne">
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label>Erstzulassung</label>
+          <input type="text" id="vdErstzulassung" placeholder="z.B. 02/2008">
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label>Kilometerstand</label>
+          <input type="number" id="vdKm" placeholder="z.B. 200000" min="0">
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label>Leistung (PS) <span style="font-weight:400;opacity:.6">unterscheidet z.B. V6/V8/Turbo</span></label>
+          <input type="number" id="vdPs" placeholder="z.B. 385" min="0">
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label>HU bis</label>
+          <input type="text" id="vdHu" placeholder="z.B. 03/2027">
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label>Getriebe</label>
+          <select id="vdGetriebe"><option value="">– bitte wählen –</option><option>Automatik</option><option>Manuell</option></select>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label>Kraftstoffart</label>
+          <select id="vdKraftstoff"><option value="">– bitte wählen –</option><option>Benzin</option><option>Diesel</option><option>Erdgas (CNG)</option><option>Autogas (LPG)</option><option>Hybrid</option><option>Elektro</option><option>Andere Kraftstoffarten</option></select>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label>Fahrzeugtyp</label>
+          <select id="vdFahrzeugtyp"><option value="">– bitte wählen –</option><option>Kleinwagen</option><option>Limousine</option><option>Kombi</option><option>Cabrio</option><option>SUV/Geländewagen</option><option>Van/Bus</option><option>Coupé</option><option>Andere Fahrzeugtypen</option></select>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label>Anzahl Türen</label>
+          <select id="vdTueren"><option value="">– bitte wählen –</option><option>2/3</option><option>4/5</option><option>6/7</option><option>Andere Türanzahl</option></select>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label>Außenfarbe</label>
+          <select id="vdFarbe"><option value="">– bitte wählen –</option><option>Beige</option><option>Blau</option><option>Braun</option><option>Gelb</option><option>Gold</option><option>Grau</option><option>Grün</option><option>Orange</option><option>Rot</option><option>Schwarz</option><option>Silber</option><option>Violet</option><option>Weiß</option><option>Andere Farben</option></select>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label>Material Innenausstattung</label>
+          <select id="vdMaterial"><option value="">– bitte wählen –</option><option>Vollleder</option><option>Teilleder</option><option>Stoff</option><option>Velours</option><option>Alcantara</option><option>Andere Materialien Innenausstattung</option></select>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label>Umweltplakette</label>
+          <select id="vdPlakette"><option value="">– bitte wählen –</option><option>4 (Grün)</option><option>3 (Gelb)</option><option>2 (Rot)</option><option>1 (Keine)</option></select>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label>Schadstoffklasse</label>
+          <select id="vdSchadstoff"><option value="">– bitte wählen –</option><option>Euro1</option><option>Euro2</option><option>Euro3</option><option>Euro4</option><option>Euro5</option><option>Euro6</option></select>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label>Fahrzeugzustand</label>
+          <select id="vdZustand"><option value="">– bitte wählen –</option><option>Beschädigtes Fahrzeug</option><option>Unbeschädigtes Fahrzeug</option></select>
+        </div>
+        <div class="field" style="margin-bottom:0;grid-column:1/-1">
+          <label>Besonderheiten <span style="font-weight:400;opacity:.6">z.B. Tauschmotor 70.000 km, Unfallschaden vorne</span></label>
+          <input type="text" id="vdBesonderheiten" placeholder="z.B. Tauschmotor mit 70.000 km">
+        </div>
+        <div class="field" style="margin-bottom:0;grid-column:1/-1">
+          <label>Wunschpreis € <span style="font-weight:400;opacity:.6">(leer = KI schlägt vor)</span></label>
+          <input type="number" id="priceInput" placeholder="0" min="0">
+        </div>
       </div>
+
       <button class="btn btn-primary" id="preCheckBtn" onclick="checkMarketPricePre()" style="width:100%;background:var(--surface);border:2px solid var(--amber);color:var(--amber);font-size:15px;font-weight:800">
         🔍 Markt jetzt checken (2 Credits)
       </button>
@@ -319,82 +383,9 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
       </div>
     </div>
 
-    <div id="vehicleDetailsToggle" onclick="toggleVehicleDetails()" style="display:flex;align-items:center;gap:8px;padding:10px 4px;cursor:pointer;font-size:13px;opacity:.6;border-bottom:1px solid var(--border);margin-bottom:14px">
-      <span id="vehicleDetailsIcon">▸</span>
-      <span>Fahrzeugdetails selbst angeben (optional – spart der KI das Raten)</span>
-    </div>
-    <div id="vehicleDetailsBody" style="display:none">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
-        <div class="field" style="margin-bottom:0">
-          <label>Marke</label>
-          <input type="text" id="vdMarke" placeholder="z.B. Mercedes-Benz">
-        </div>
-        <div class="field" style="margin-bottom:0">
-          <label>Modell</label>
-          <input type="text" id="vdModell" placeholder="z.B. C 200 Kompressor">
-        </div>
-        <div class="field" style="margin-bottom:0">
-          <label>Erstzulassung</label>
-          <input type="text" id="vdErstzulassung" placeholder="z.B. 02/2002">
-        </div>
-        <div class="field" style="margin-bottom:0">
-          <label>Kilometerstand</label>
-          <input type="number" id="vdKm" placeholder="z.B. 85000" min="0">
-        </div>
-        <div class="field" style="margin-bottom:0">
-          <label>HU bis</label>
-          <input type="text" id="vdHu" placeholder="z.B. 03/2027">
-        </div>
-        <div class="field" style="margin-bottom:0">
-          <label>Getriebe</label>
-          <select id="vdGetriebe"><option value="">– bitte wählen –</option><option>Automatik</option><option>Manuell</option></select>
-        </div>
-        <div class="field" style="margin-bottom:0">
-          <label>Kraftstoffart</label>
-          <select id="vdKraftstoff"><option value="">– bitte wählen –</option><option>Benzin</option><option>Diesel</option><option>Erdgas (CNG)</option><option>Autogas (LPG)</option><option>Hybrid</option><option>Elektro</option><option>Andere Kraftstoffarten</option></select>
-        </div>
-        <div class="field" style="margin-bottom:0">
-          <label>Fahrzeugtyp</label>
-          <select id="vdFahrzeugtyp"><option value="">– bitte wählen –</option><option>Kleinwagen</option><option>Limousine</option><option>Kombi</option><option>Cabrio</option><option>SUV/Geländewagen</option><option>Van/Bus</option><option>Coupé</option><option>Andere Fahrzeugtypen</option></select>
-        </div>
-        <div class="field" style="margin-bottom:0">
-          <label>Anzahl Türen</label>
-          <select id="vdTueren"><option value="">– bitte wählen –</option><option>2/3</option><option>4/5</option><option>6/7</option><option>Andere Türanzahl</option></select>
-        </div>
-        <div class="field" style="margin-bottom:0">
-          <label>Außenfarbe</label>
-          <select id="vdFarbe"><option value="">– bitte wählen –</option><option>Beige</option><option>Blau</option><option>Braun</option><option>Gelb</option><option>Gold</option><option>Grau</option><option>Grün</option><option>Orange</option><option>Rot</option><option>Schwarz</option><option>Silber</option><option>Violet</option><option>Weiß</option><option>Andere Farben</option></select>
-        </div>
-        <div class="field" style="margin-bottom:0">
-          <label>Material Innenausstattung</label>
-          <select id="vdMaterial"><option value="">– bitte wählen –</option><option>Vollleder</option><option>Teilleder</option><option>Stoff</option><option>Velours</option><option>Alcantara</option><option>Andere Materialien Innenausstattung</option></select>
-        </div>
-        <div class="field" style="margin-bottom:0">
-          <label>Umweltplakette</label>
-          <select id="vdPlakette"><option value="">– bitte wählen –</option><option>4 (Grün)</option><option>3 (Gelb)</option><option>2 (Rot)</option><option>1 (Keine)</option></select>
-        </div>
-        <div class="field" style="margin-bottom:0">
-          <label>Schadstoffklasse</label>
-          <select id="vdSchadstoff"><option value="">– bitte wählen –</option><option>Euro1</option><option>Euro2</option><option>Euro3</option><option>Euro4</option><option>Euro5</option><option>Euro6</option></select>
-        </div>
-        <div class="field" style="margin-bottom:0">
-          <label>Fahrzeugzustand</label>
-          <select id="vdZustand"><option value="">– bitte wählen –</option><option>Beschädigtes Fahrzeug</option><option>Unbeschädigtes Fahrzeug</option></select>
-        </div>
-        <div class="field" style="margin-bottom:0">
-          <label>Leistung (PS)</label>
-          <input type="number" id="vdPs" placeholder="z.B. 150" min="0">
-        </div>
-      </div>
-    </div>
-
     <div class="field">
-      <label>Zustand / Hinweise <span style="font-weight:400;opacity:.6">(optional)</span></label>
+      <label>Zustand / Hinweise <span style="font-weight:400;opacity:.6">(optional, zusätzlich zu den Besonderheiten oben)</span></label>
       <input type="text" id="conditionInput" placeholder="z.B. leichte Gebrauchsspuren, funktioniert einwandfrei …">
-    </div>
-    <div class="field">
-      <label>Wunschpreis € <span style="font-weight:400;opacity:.6">(leer = KI schlägt vor)</span></label>
-      <input type="number" id="priceInput" placeholder="0" min="0">
     </div>
 
     <div style="margin-bottom:20px">
@@ -1118,14 +1109,6 @@ function expandMercedesExtras() {
   document.getElementById('mercedesExtrasIcon').textContent = '▾';
 }
 
-// ══ FAHRZEUGDETAILS EIN-/AUSKLAPPEN ══
-function toggleVehicleDetails() {
-  var body = document.getElementById('vehicleDetailsBody');
-  var isOpen = body.style.display !== 'none';
-  body.style.display = isOpen ? 'none' : 'block';
-  document.getElementById('vehicleDetailsIcon').textContent = isOpen ? '▸' : '▾';
-}
-
 // ══ NEUES INSERAT (kompletter Reset) ══
 function resetInseratForm() {
   if (!confirm('Neues Inserat starten? Alle aktuellen Eingaben und das Ergebnis werden geleert. (Bereits gespeicherte Anzeigen im Archiv bleiben erhalten.)')) return;
@@ -1148,10 +1131,8 @@ function resetInseratForm() {
   document.getElementById('mercedesExtrasIcon').textContent = '▸';
 
   // Fahrzeugdetails-Felder
-  ['vdMarke','vdModell','vdErstzulassung','vdKm','vdHu','vdPs'].forEach(function(id) { document.getElementById(id).value = ''; });
+  ['vdMarke','vdModell','vdErstzulassung','vdKm','vdHu','vdPs','vdBesonderheiten'].forEach(function(id) { document.getElementById(id).value = ''; });
   ['vdGetriebe','vdKraftstoff','vdFahrzeugtyp','vdTueren','vdFarbe','vdMaterial','vdPlakette','vdSchadstoff','vdZustand'].forEach(function(id) { document.getElementById(id).value = ''; });
-  document.getElementById('vehicleDetailsBody').style.display = 'none';
-  document.getElementById('vehicleDetailsIcon').textContent = '▸';
 
   // Zustand, Preis, Plattform
   document.getElementById('conditionInput').value = '';
@@ -1257,7 +1238,8 @@ function generateInserat() {
       plakette: document.getElementById('vdPlakette').value,
       schadstoff: document.getElementById('vdSchadstoff').value,
       zustand: document.getElementById('vdZustand').value,
-      ps: document.getElementById('vdPs').value
+      ps: document.getElementById('vdPs').value,
+      besonderheiten: document.getElementById('vdBesonderheiten').value
     };
     var vdFilled = Object.keys(vd).filter(function(k) { return vd[k]; });
 
@@ -1310,6 +1292,7 @@ function generateInserat() {
       if (vd.schadstoff) prompt += 'Schadstoffklasse: ' + vd.schadstoff + '\n';
       if (vd.zustand) prompt += 'Fahrzeugzustand: ' + vd.zustand + '\n';
       if (vd.ps) prompt += 'Leistung: ' + vd.ps + ' PS\n';
+      if (vd.besonderheiten) prompt += 'Besonderheiten: ' + vd.besonderheiten + '\n';
       prompt += '\n';
     }
     prompt += 'STRUKTUR DER AUSGABE:\n';
@@ -1432,7 +1415,13 @@ function buildMarketQuery() {
   // Build a search query from Marke/Modell (vehicle details) or from the generated title
   var marke = document.getElementById('vdMarke').value;
   var modell = document.getElementById('vdModell').value;
-  if (marke || modell) return (marke + ' ' + modell).trim();
+  if (marke || modell) {
+    var ps = document.getElementById('vdPs').value;
+    var km = document.getElementById('vdKm').value;
+    var ez = document.getElementById('vdErstzulassung').value;
+    var ezYear = ez.match(/(\d{4})/);
+    return [marke, modell, ezYear ? 'Baujahr ' + ezYear[1] : '', ps ? ps + ' PS' : '', km ? km + ' km' : ''].filter(Boolean).join(' ').trim();
+  }
   if (!lastInseratRaw) return '';
   var titel = extractInseratTitel(lastInseratRaw);
   return titel.indexOf('Inserat vom ') === 0 ? '' : titel;
@@ -1517,17 +1506,29 @@ function markdownToHtml(md) {
 function checkMarketPricePre() {
   if (currentCredits < 2) { openModal('empty'); return; }
 
-  var marke = document.getElementById('preCheckMarke').value.trim();
-  var modell = document.getElementById('preCheckModell').value.trim();
-  var baujahr = document.getElementById('preCheckBaujahr').value.trim();
-  var km = document.getElementById('preCheckKm').value.trim();
-  var zustand = document.getElementById('preCheckZustand').value.trim();
-  var wunschpreis = document.getElementById('preCheckPreis').value;
+  var marke = document.getElementById('vdMarke').value.trim();
+  var modell = document.getElementById('vdModell').value.trim();
+  var erstzulassung = document.getElementById('vdErstzulassung').value.trim();
+  var km = document.getElementById('vdKm').value.trim();
+  var ps = document.getElementById('vdPs').value.trim();
+  var getriebe = document.getElementById('vdGetriebe').value;
+  var kraftstoff = document.getElementById('vdKraftstoff').value;
+  var besonderheiten = document.getElementById('vdBesonderheiten').value.trim();
+  var wunschpreis = document.getElementById('priceInput').value;
 
   if (!marke && !modell) { alert('Bitte mindestens Marke und Modell eingeben.'); return; }
 
-  var query = [marke, modell, baujahr ? 'Baujahr ' + baujahr : '', km ? km + ' km' : ''].filter(Boolean).join(' ');
-  var zusatzInfo = zustand;
+  // Baujahr aus Erstzulassung ableiten (z.B. "02/2008" -> "2008"), falls möglich
+  var baujahr = '';
+  var ezMatch = erstzulassung.match(/(\d{4})/);
+  if (ezMatch) baujahr = ezMatch[1];
+
+  var query = [marke, modell, baujahr ? 'Baujahr ' + baujahr : '', ps ? ps + ' PS' : '', km ? km + ' km' : ''].filter(Boolean).join(' ');
+  var zusatzInfoParts = [];
+  if (getriebe) zusatzInfoParts.push(getriebe);
+  if (kraftstoff) zusatzInfoParts.push(kraftstoff);
+  if (besonderheiten) zusatzInfoParts.push(besonderheiten);
+  var zusatzInfo = zusatzInfoParts.join(', ');
 
   deductCredit(2, function() {
     var btn = document.getElementById('preCheckBtn');
@@ -1570,6 +1571,12 @@ function checkMarketPricePre() {
       document.getElementById('preCheckStatus').style.display = 'none';
       btn.disabled = false;
       document.getElementById('preCheckResult').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+      // Ergebnis lokal sichern, damit es einen Reload/Schließen der Seite übersteht
+      // Persist result locally so it survives a reload/closing the page
+      try {
+        localStorage.setItem('tp_last_market_check', JSON.stringify({ query: query, text: text, datum: new Date().toLocaleString('de-DE') }));
+      } catch(e) {}
     })
     .catch(function(err) {
       clearTimeout(timeoutId);
@@ -2361,6 +2368,17 @@ document.getElementById('finalActions').style.display = 'none';
 document.getElementById('marketCheckBox').style.display = 'none';
 document.getElementById('inseratResult').classList.remove('show');
 renderInseratDropdown();
+restoreLastMarketCheck();
+
+function restoreLastMarketCheck() {
+  try {
+    var saved = JSON.parse(localStorage.getItem('tp_last_market_check') || 'null');
+    if (!saved || !saved.text) return;
+    var content = document.getElementById('preCheckResultContent');
+    content.innerHTML = '<div style="font-size:11px;opacity:.5;margin-bottom:10px">📌 Letztes Ergebnis, gespeichert am ' + saved.datum + ' (' + saved.query + ')</div>' + markdownToHtml(saved.text);
+    document.getElementById('preCheckResult').classList.add('show');
+  } catch(e) {}
+}
 
 // Mode param
 (function() {
