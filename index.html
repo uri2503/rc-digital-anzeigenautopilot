@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AnzeigenAutopilot – KI-Assistent für Kleinanzeigen</title>
-<!-- build: 2026-07-07-6 -->
+<!-- build: 2026-07-07-7 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -218,6 +218,26 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
       <button class="btn btn-ghost" onclick="resetInseratForm()" style="font-size:13px;padding:8px 14px">🆕 Neues Inserat</button>
     </div>
     <div style="margin-bottom:14px"></div>
+
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;margin-bottom:20px">
+      <div style="font-weight:700;font-size:14px;margin-bottom:6px">🔍 Erst den Markt checken? <span style="font-weight:400;opacity:.6;font-size:12px">(optional, 2 Credits)</span></div>
+      <div style="font-size:12px;opacity:.6;margin-bottom:12px">Wenn du vor dem Inserieren ein Gefühl für den aktuellen Markt bekommen willst – z.B. ob er gerade überfüllt ist und sich dein Wunschpreis kaum durchsetzen lässt – lohnt sich dieser Check, bevor du überhaupt Fotos hochlädst.</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+        <input type="text" id="preCheckQuery" placeholder="z.B. Mercedes C200 Kompressor 2002" style="flex:1;min-width:200px;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:var(--radius-sm);font-size:14px">
+        <input type="number" id="preCheckPreis" placeholder="Wunschpreis € (optional)" style="width:180px;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:var(--radius-sm);font-size:14px" min="0">
+      </div>
+      <button class="btn btn-primary" id="preCheckBtn" onclick="checkMarketPricePre()" style="width:100%;background:var(--surface);border:2px solid var(--amber);color:var(--amber);font-size:15px;font-weight:800">
+        🔍 Markt jetzt checken (2 Credits)
+      </button>
+      <div class="ki-progress" id="preCheckProgress" style="display:none"><div class="ki-progress-bar"></div></div>
+      <div class="ki-status" id="preCheckStatus" style="display:none">🔍 Durchsuche aktuelle Vergleichsangebote …</div>
+      <div class="result-box" id="preCheckResult" style="margin-top:12px">
+        <div class="result-header">
+          <span class="result-label">Marktanalyse</span>
+        </div>
+        <div id="preCheckResultContent" style="font-size:14px;line-height:1.6"></div>
+      </div>
+    </div>
 
     <!-- MODE SWITCHER -->
     <div class="mode-switcher">
@@ -1409,8 +1429,143 @@ function buildMarketQuery() {
   var marke = document.getElementById('vdMarke').value;
   var modell = document.getElementById('vdModell').value;
   if (marke || modell) return (marke + ' ' + modell).trim();
-  var titleMatch = lastInseratRaw.match(/TITEL:\s*\n?[`']?([^\n`']+)[`']?/i);
-  return titleMatch ? titleMatch[1].trim() : '';
+  var titleMatch = lastInseratRaw.match(/TITEL[:\s]*\**\s*\n?[`'"]?([^\n`'"]+?)[`'"]?\s*\**\s*(?:\n|$)/i);
+  return titleMatch ? titleMatch[1].replace(/\*/g, '').trim() : '';
+}
+
+function buildMarketPrompt(query, wunschpreis) {
+  var prompt = 'Du bist ein Experte für Gebrauchtwagen-Marktpreise in Deutschland. ';
+  prompt += 'Suche aktuell aktive Verkaufsangebote für folgendes Fahrzeug: "' + query + '". ';
+  prompt += 'Durchsuche dabei gezielt Kleinanzeigen, mobile.de und AutoScout24 getrennt voneinander. ';
+  prompt += 'Antworte GENAU in dieser Struktur, auf Deutsch, ohne lange Einleitung:\n\n';
+  prompt += '### Marktübersicht\n';
+  prompt += 'Eine Tabelle in Markdown mit exakt diesen Spalten: Plattform | Anzahl gefundener Angebote | Preiskorridor (von–bis in €). Eine Zeile pro Plattform (Kleinanzeigen, mobile.de, AutoScout24). Wenn für eine Plattform keine Angebote gefunden wurden, trage "0" bzw. "–" ein statt zu raten.\n\n';
+  prompt += '### Beispielangebote\n';
+  prompt += '2-3 konkrete Beispielangebote als Liste, mit Preis, Baujahr/Kilometerstand falls erkennbar, und Plattform in Klammern.\n\n';
+  prompt += '### Einschätzung\n';
+  if (wunschpreis) {
+    prompt += 'Eine klare Einschätzung, ob ein Wunschpreis von ' + wunschpreis + ' € realistisch, zu hoch oder zu niedrig ist, UND eine Einschätzung, ob der Markt aktuell eher überfüllt/käuferfreundlich oder eher verkäuferfreundlich wirkt (z.B. wenn auffällig viele/wenige vergleichbare Angebote existieren).';
+  } else {
+    prompt += 'Eine Einschätzung des aktuellen Marktumfelds: ist der Markt für dieses Fahrzeug gerade eher überfüllt (viele Vergleichsangebote, Käufermarkt) oder eher knapp (wenige Angebote, guter Zeitpunkt zum Verkaufen)? Und eine grobe Preisempfehlung.';
+  }
+  prompt += ' Maximal 200 Wörter insgesamt.';
+  return prompt;
+}
+
+// ══ EINFACHER MARKDOWN-RENDERER (Überschriften, Tabellen, Listen, Fett) ══
+function markdownToHtml(md) {
+  var lines = md.split('\n');
+  var html = '';
+  var inTable = false;
+  var inList = false;
+
+  function closeList() { if (inList) { html += '</ul>'; inList = false; } }
+  function closeTable() { if (inTable) { html += '</table>'; inTable = false; } }
+  function inlineFormat(s) {
+    return s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  }
+
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i].trim();
+    if (!line) { closeList(); closeTable(); continue; }
+
+    // Überschriften ### / ##
+    var headMatch = line.match(/^(#{2,3})\s+(.+)$/);
+    if (headMatch) {
+      closeList(); closeTable();
+      html += '<div style="font-weight:800;font-size:14px;margin:16px 0 8px;color:var(--amber)">' + inlineFormat(headMatch[2]) + '</div>';
+      continue;
+    }
+
+    // Tabellenzeile | a | b | c |
+    if (/^\|.*\|$/.test(line)) {
+      // Trennzeile |---|---| überspringen
+      if (/^\|[\s\-:|]+\|$/.test(line)) continue;
+      if (!inTable) { closeList(); html += '<table style="width:100%;border-collapse:collapse;margin-bottom:12px;font-size:13px">'; inTable = true; }
+      var cells = line.split('|').slice(1, -1).map(function(c) { return c.trim(); });
+      html += '<tr>';
+      cells.forEach(function(c) { html += '<td style="padding:6px 8px;border-bottom:1px solid var(--border)">' + inlineFormat(c) + '</td>'; });
+      html += '</tr>';
+      continue;
+    }
+    closeTable();
+
+    // Listenpunkte - oder *
+    var listMatch = line.match(/^[-*]\s+(.+)$/);
+    if (listMatch) {
+      if (!inList) { html += '<ul style="margin:0 0 12px;padding-left:20px">'; inList = true; }
+      html += '<li style="margin-bottom:4px">' + inlineFormat(listMatch[1]) + '</li>';
+      continue;
+    }
+    closeList();
+
+    // Normaler Absatz
+    html += '<div style="margin-bottom:8px">' + inlineFormat(line) + '</div>';
+  }
+  closeList(); closeTable();
+  return html;
+}
+
+function checkMarketPricePre() {
+  if (currentCredits < 2) { openModal('empty'); return; }
+  var query = document.getElementById('preCheckQuery').value.trim();
+  if (!query) { alert('Bitte eine Fahrzeugbezeichnung eingeben, z.B. "Mercedes C200 Kompressor 2002".'); return; }
+  var wunschpreis = document.getElementById('preCheckPreis').value;
+
+  deductCredit(2, function() {
+    var btn = document.getElementById('preCheckBtn');
+    btn.disabled = true;
+    document.getElementById('preCheckProgress').style.display = 'block';
+    document.getElementById('preCheckStatus').style.display = 'block';
+    document.getElementById('preCheckResult').classList.remove('show');
+
+    var prompt = buildMarketPrompt(query, wunschpreis);
+    var controller = new AbortController();
+    var timeoutId = setTimeout(function() { controller.abort(); }, 55000);
+
+    fetch(CFG.sbUrl + '/functions/v1/claude-proxy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + CFG.sbKey },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1200,
+        messages: [{ role: 'user', content: prompt }],
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }]
+      }),
+      signal: controller.signal
+    })
+    .then(function(r) {
+      clearTimeout(timeoutId);
+      if (!r.ok) { return r.text().then(function(t) { throw new Error('Server ' + r.status + ': ' + t.substring(0, 200)); }); }
+      return r.json();
+    })
+    .then(function(data) {
+      if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+      var text = (data.content || [])
+        .filter(function(b) { return b.type === 'text'; })
+        .map(function(b) { return b.text; })
+        .join('\n');
+      if (!text) throw new Error('KI hat keine Marktanalyse zurückgegeben.');
+
+      document.getElementById('preCheckResultContent').innerHTML = markdownToHtml(text);
+      document.getElementById('preCheckResult').classList.add('show');
+      document.getElementById('preCheckProgress').style.display = 'none';
+      document.getElementById('preCheckStatus').style.display = 'none';
+      btn.disabled = false;
+      document.getElementById('preCheckResult').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    })
+    .catch(function(err) {
+      clearTimeout(timeoutId);
+      var msg = err.name === 'AbortError' ? 'Timeout – Suche hat zu lange gebraucht. Bitte nochmal versuchen.' : ('Fehler: ' + err.message);
+      alert(msg);
+      currentCredits = currentCredits + 2;
+      updateCreditDisplay();
+      syncCredits(getBrowserId(), 2);
+      document.getElementById('preCheckProgress').style.display = 'none';
+      document.getElementById('preCheckStatus').style.display = 'none';
+      btn.disabled = false;
+    });
+  });
 }
 
 function checkMarketPrice() {
@@ -1425,12 +1580,7 @@ function checkMarketPrice() {
     document.getElementById('marketStatus').style.display = 'block';
     document.getElementById('marketResult').classList.remove('show');
 
-    var prompt = 'Du bist ein Experte für Gebrauchtwagen-Marktpreise in Deutschland. ';
-    prompt += 'Suche aktuell aktive Verkaufsangebote für folgendes Fahrzeug: "' + query + '". ';
-    prompt += 'Durchsuche dabei gezielt Kleinanzeigen, mobile.de und AutoScout24. ';
-    prompt += 'Fasse zusammen: (1) Preisspanne vergleichbarer aktiver Angebote, (2) 2-3 konkrete Beispielangebote mit Preis und kurzer Beschreibung (Kilometerstand/Zustand falls erkennbar), (3) eine klare Einschätzung, ob der eigene Wunschpreis von ' +
-      (document.getElementById('priceInput').value || 'nicht angegeben') + ' € realistisch, zu hoch oder zu niedrig ist. ';
-    prompt += 'Antworte kompakt in maximal 150 Wörtern, auf Deutsch, ohne lange Einleitung.';
+    var prompt = buildMarketPrompt(query, document.getElementById('priceInput').value);
 
     var controller = new AbortController();
     var timeoutId = setTimeout(function() { controller.abort(); }, 55000);
@@ -1440,7 +1590,7 @@ function checkMarketPrice() {
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + CFG.sbKey },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
-        max_tokens: 1000,
+        max_tokens: 1200,
         messages: [{ role: 'user', content: prompt }],
         tools: [{ type: 'web_search_20250305', name: 'web_search' }]
       }),
@@ -1461,7 +1611,7 @@ function checkMarketPrice() {
         .join('\n');
       if (!text) throw new Error('KI hat keine Marktanalyse zurückgegeben.');
 
-      document.getElementById('marketResultContent').innerHTML = text.replace(/\n/g, '<br>');
+      document.getElementById('marketResultContent').innerHTML = markdownToHtml(text);
       document.getElementById('marketResult').classList.add('show');
       document.getElementById('marketProgress').style.display = 'none';
       document.getElementById('marketStatus').style.display = 'none';
@@ -1664,8 +1814,9 @@ function getSavedInserate() {
 }
 
 function saveInseratToList(text) {
-  var titM = text.match(/TITEL[:\s]*\n?[`']?([^\n`']+)[`']?/);
-  var titel = titM ? titM[1].trim() : text.substring(0, 50);
+  var titM = text.match(/TITEL[:\s]*\**\s*\n?[`'"]?([^\n`'"]+?)[`'"]?\s*\**\s*(?:\n|$)/i);
+  var titel = titM ? titM[1].replace(/\*/g, '').trim() : text.substring(0, 50);
+  if (!titel) titel = text.substring(0, 50);
   var id = 'ins_' + Date.now();
 
   // Ausfüllhilfe-Werte mitspeichern, falls vorhanden
