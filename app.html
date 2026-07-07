@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AnzeigenAutopilot – KI-Assistent für Kleinanzeigen</title>
-<!-- build: 2026-07-07-8 -->
+<!-- build: 2026-07-07-9 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -221,10 +221,14 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 
     <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;margin-bottom:20px">
       <div style="font-weight:700;font-size:14px;margin-bottom:6px">🔍 Erst den Markt checken? <span style="font-weight:400;opacity:.6;font-size:12px">(optional, 2 Credits)</span></div>
-      <div style="font-size:12px;opacity:.6;margin-bottom:12px">Wenn du vor dem Inserieren ein Gefühl für den aktuellen Markt bekommen willst – z.B. ob er gerade überfüllt ist und sich dein Wunschpreis kaum durchsetzen lässt – lohnt sich dieser Check, bevor du überhaupt Fotos hochlädst.</div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">
-        <input type="text" id="preCheckQuery" placeholder="z.B. Mercedes C200 Kompressor 2002" style="flex:1;min-width:200px;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:var(--radius-sm);font-size:14px">
-        <input type="number" id="preCheckPreis" placeholder="Wunschpreis € (optional)" style="width:180px;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:var(--radius-sm);font-size:14px" min="0">
+      <div style="font-size:12px;opacity:.6;margin-bottom:12px">Wenn du vor dem Inserieren ein Gefühl für den aktuellen Markt bekommen willst – z.B. ob er gerade überfüllt ist und sich dein Wunschpreis kaum durchsetzen lässt – lohnt sich dieser Check, bevor du überhaupt Fotos hochlädst. Je genauer deine Angaben, desto präziser die Analyse.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <input type="text" id="preCheckMarke" placeholder="Marke, z.B. Porsche" style="background:var(--surface);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:var(--radius-sm);font-size:14px">
+        <input type="text" id="preCheckModell" placeholder="Modell, z.B. Cayenne 4.8" style="background:var(--surface);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:var(--radius-sm);font-size:14px">
+        <input type="text" id="preCheckBaujahr" placeholder="Baujahr, z.B. 2008" style="background:var(--surface);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:var(--radius-sm);font-size:14px">
+        <input type="text" id="preCheckKm" placeholder="Kilometerstand, z.B. 200000" style="background:var(--surface);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:var(--radius-sm);font-size:14px">
+        <input type="text" id="preCheckZustand" placeholder="Zustand/Besonderheiten, z.B. Tauschmotor 70.000 km" style="grid-column:1/-1;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:var(--radius-sm);font-size:14px">
+        <input type="number" id="preCheckPreis" placeholder="Wunschpreis € (optional)" style="grid-column:1/-1;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:var(--radius-sm);font-size:14px" min="0">
       </div>
       <button class="btn btn-primary" id="preCheckBtn" onclick="checkMarketPricePre()" style="width:100%;background:var(--surface);border:2px solid var(--amber);color:var(--amber);font-size:15px;font-weight:800">
         🔍 Markt jetzt checken (2 Credits)
@@ -1434,9 +1438,12 @@ function buildMarketQuery() {
   return titel.indexOf('Inserat vom ') === 0 ? '' : titel;
 }
 
-function buildMarketPrompt(query, wunschpreis) {
+function buildMarketPrompt(query, wunschpreis, zusatzInfo) {
   var prompt = 'Du bist ein Experte für Gebrauchtwagen-Marktpreise in Deutschland. ';
   prompt += 'Suche aktuell aktive Verkaufsangebote für folgendes Fahrzeug: "' + query + '". ';
+  if (zusatzInfo) {
+    prompt += 'Besonderheiten/Zustand dieses konkreten Fahrzeugs (nur für die Einschätzung relevant, nicht Teil der Suchbegriffe): ' + zusatzInfo + '. ';
+  }
   prompt += 'Durchsuche dabei gezielt Kleinanzeigen, mobile.de und AutoScout24 getrennt voneinander. ';
   prompt += 'Antworte GENAU in dieser Struktur, auf Deutsch, ohne lange Einleitung:\n\n';
   prompt += '### Marktübersicht\n';
@@ -1449,7 +1456,7 @@ function buildMarketPrompt(query, wunschpreis) {
   } else {
     prompt += 'Eine Einschätzung des aktuellen Marktumfelds: ist der Markt für dieses Fahrzeug gerade eher überfüllt (viele Vergleichsangebote, Käufermarkt) oder eher knapp (wenige Angebote, guter Zeitpunkt zum Verkaufen)? Und eine grobe Preisempfehlung.';
   }
-  prompt += ' Maximal 200 Wörter insgesamt.';
+  prompt += ' WICHTIG: Maximal 200 Wörter insgesamt für die gesamte Antwort. Fasse dich in der Einschätzung kurz und konkret, verzichte auf ausführliche Nebenrechnungen (z.B. keine Vergleichspreise für Einzelkomponenten wie Austauschmotoren) – die Haupttabelle und 2-3 Beispielangebote sind wichtiger als lange Zusatzerklärungen.';
   return prompt;
 }
 
@@ -1509,9 +1516,18 @@ function markdownToHtml(md) {
 
 function checkMarketPricePre() {
   if (currentCredits < 2) { openModal('empty'); return; }
-  var query = document.getElementById('preCheckQuery').value.trim();
-  if (!query) { alert('Bitte eine Fahrzeugbezeichnung eingeben, z.B. "Mercedes C200 Kompressor 2002".'); return; }
+
+  var marke = document.getElementById('preCheckMarke').value.trim();
+  var modell = document.getElementById('preCheckModell').value.trim();
+  var baujahr = document.getElementById('preCheckBaujahr').value.trim();
+  var km = document.getElementById('preCheckKm').value.trim();
+  var zustand = document.getElementById('preCheckZustand').value.trim();
   var wunschpreis = document.getElementById('preCheckPreis').value;
+
+  if (!marke && !modell) { alert('Bitte mindestens Marke und Modell eingeben.'); return; }
+
+  var query = [marke, modell, baujahr ? 'Baujahr ' + baujahr : '', km ? km + ' km' : ''].filter(Boolean).join(' ');
+  var zusatzInfo = zustand;
 
   deductCredit(2, function() {
     var btn = document.getElementById('preCheckBtn');
@@ -1520,7 +1536,7 @@ function checkMarketPricePre() {
     document.getElementById('preCheckStatus').style.display = 'block';
     document.getElementById('preCheckResult').classList.remove('show');
 
-    var prompt = buildMarketPrompt(query, wunschpreis);
+    var prompt = buildMarketPrompt(query, wunschpreis, zusatzInfo);
     var controller = new AbortController();
     var timeoutId = setTimeout(function() { controller.abort(); }, 55000);
 
@@ -1529,7 +1545,7 @@ function checkMarketPricePre() {
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + CFG.sbKey },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
-        max_tokens: 1200,
+        max_tokens: 2500,
         messages: [{ role: 'user', content: prompt }],
         tools: [{ type: 'web_search_20250305', name: 'web_search' }]
       }),
@@ -1591,7 +1607,7 @@ function checkMarketPrice() {
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + CFG.sbKey },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
-        max_tokens: 1200,
+        max_tokens: 2500,
         messages: [{ role: 'user', content: prompt }],
         tools: [{ type: 'web_search_20250305', name: 'web_search' }]
       }),
