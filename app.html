@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AnzeigenAutopilot – KI-Assistent für Kleinanzeigen</title>
-<!-- build: 2026-07-08-1 -->
+<!-- build: 2026-07-08-3 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -302,8 +302,10 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
       <div class="result-box" id="preCheckResult" style="margin-top:12px">
         <div class="result-header">
           <span class="result-label">Marktanalyse</span>
+          <button class="btn btn-ghost" onclick="printCurrentMarketCheck('preCheckResultContent')" style="font-size:12px;padding:6px 12px">🖨️</button>
         </div>
         <div id="preCheckResultContent" style="font-size:14px;line-height:1.6"></div>
+        <div id="preCheckWatchlist" style="margin-top:14px"></div>
       </div>
     </div>
 
@@ -427,8 +429,10 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
       <div class="result-box" id="marketResult" style="margin-top:12px">
         <div class="result-header">
           <span class="result-label">Marktpreis-Analyse</span>
+          <button class="btn btn-ghost" onclick="printCurrentMarketCheck('marketResultContent')" style="font-size:12px;padding:6px 12px">🖨️</button>
         </div>
         <div id="marketResultContent" style="font-size:14px;line-height:1.6"></div>
+        <div id="marketWatchlist" style="margin-top:14px"></div>
       </div>
     </div>
 
@@ -573,7 +577,11 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
   <!-- ══ TAB: ARCHIV ══ -->
   <div class="tab-panel" id="tab-archiv">
     <p class="section-title">Deine gespeicherten Anzeigen</p>
-    <div style="font-size:13px;opacity:.6;margin-bottom:18px">Bleiben auf diesem Gerät gespeichert (max. 20) – nützlich für Verlängerungen oder erneutes Einstellen.</div>
+    <div style="font-size:13px;opacity:.6;margin-bottom:18px">Bleiben auf diesem Gerät gespeichert (max. je 20) – nützlich für Verlängerungen, erneutes Einstellen oder zum Nachschauen alter Marktanalysen.</div>
+    <div style="display:flex;gap:8px;margin-bottom:16px" id="archivFilterBar">
+      <button class="plat-tab active" onclick="switchArchivView('inserate')" id="archivFilter-inserate">📝 Inserate</button>
+      <button class="plat-tab" onclick="switchArchivView('markt')" id="archivFilter-markt">🔍 Marktchecks</button>
+    </div>
     <div id="archivList"></div>
     <div id="archivEmpty" style="display:none;text-align:center;padding:40px 20px;opacity:.5;font-size:14px">Noch keine Anzeigen gespeichert.</div>
   </div>
@@ -583,8 +591,23 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
     <p class="section-title">Anzeigen-Board</p>
     <div style="font-size:13px;opacity:.6;margin-bottom:18px">Behalte den Überblick über alle laufenden Anzeigen – auf jeder Plattform, egal ob mit KI erstellt oder komplett manuell (z.B. Hausflohmarkt).</div>
 
-    <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;margin-bottom:20px">
-      <div style="font-weight:700;font-size:14px;margin-bottom:12px">➕ Neuer Eintrag</div>
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap" id="boardFilterBar">
+      <button class="plat-tab active" onclick="filterBoard('alle')" id="boardFilter-alle">Alle</button>
+      <button class="plat-tab" onclick="filterBoard('Aktiv')" id="boardFilter-Aktiv">Aktiv</button>
+      <button class="plat-tab" onclick="filterBoard('Beobachtung')" id="boardFilter-Beobachtung">Beobachtung</button>
+      <button class="plat-tab" onclick="filterBoard('Reserviert')" id="boardFilter-Reserviert">Reserviert</button>
+      <button class="plat-tab" onclick="filterBoard('Verkauft')" id="boardFilter-Verkauft">Verkauft</button>
+      <button class="plat-tab" onclick="filterBoard('Abgelaufen/Beendet')" id="boardFilter-Abgelaufen/Beendet">Abgelaufen</button>
+    </div>
+
+    <div id="boardList"></div>
+    <div id="boardEmpty" style="display:none;text-align:center;padding:40px 20px;opacity:.5;font-size:14px">Noch keine Anzeigen im Board. Trage weiter unten deine erste ein.</div>
+
+    <div id="boardAddToggle" onclick="toggleBoardAdd()" style="display:flex;align-items:center;gap:8px;padding:14px 4px;cursor:pointer;font-size:13px;opacity:.6;border-top:1px solid var(--border);margin-top:24px">
+      <span id="boardAddIcon">▸</span>
+      <span>➕ Anzeige manuell hinzufügen</span>
+    </div>
+    <div id="boardAddBody" style="display:none;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;margin-top:10px">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
         <div class="field" style="margin-bottom:0;grid-column:1/-1">
           <label>Titel</label>
@@ -628,17 +651,6 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
       </div>
       <button class="btn btn-primary" onclick="addBoardEntry()" style="width:100%">Eintrag hinzufügen</button>
     </div>
-
-    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap" id="boardFilterBar">
-      <button class="plat-tab active" onclick="filterBoard('alle')" id="boardFilter-alle">Alle</button>
-      <button class="plat-tab" onclick="filterBoard('Aktiv')" id="boardFilter-Aktiv">Aktiv</button>
-      <button class="plat-tab" onclick="filterBoard('Reserviert')" id="boardFilter-Reserviert">Reserviert</button>
-      <button class="plat-tab" onclick="filterBoard('Verkauft')" id="boardFilter-Verkauft">Verkauft</button>
-      <button class="plat-tab" onclick="filterBoard('Abgelaufen/Beendet')" id="boardFilter-Abgelaufen/Beendet">Abgelaufen</button>
-    </div>
-
-    <div id="boardList"></div>
-    <div id="boardEmpty" style="display:none;text-align:center;padding:40px 20px;opacity:.5;font-size:14px">Noch keine Anzeigen im Board. Trage oben deine erste ein.</div>
   </div>
 
   <!-- ══ TAB 3: EINSTELLUNGEN ══ -->
@@ -1104,6 +1116,13 @@ function toggleMercedesExtras() {
   document.getElementById('mercedesExtrasIcon').textContent = isOpen ? '▸' : '▾';
 }
 
+function toggleBoardAdd() {
+  var body = document.getElementById('boardAddBody');
+  var isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : 'block';
+  document.getElementById('boardAddIcon').textContent = isOpen ? '▸' : '▾';
+}
+
 function expandMercedesExtras() {
   document.getElementById('mercedesExtrasBody').style.display = 'block';
   document.getElementById('mercedesExtrasIcon').textContent = '▾';
@@ -1445,11 +1464,99 @@ function buildMarketPrompt(query, wunschpreis, zusatzInfo) {
   } else {
     prompt += 'Eine Einschätzung des aktuellen Marktumfelds: ist der Markt für dieses Fahrzeug gerade eher überfüllt (viele Vergleichsangebote, Käufermarkt) oder eher knapp (wenige Angebote, guter Zeitpunkt zum Verkaufen)? Und eine grobe Preisempfehlung.';
   }
-  prompt += ' WICHTIG: Maximal 200 Wörter insgesamt für die gesamte Antwort. Fasse dich in der Einschätzung kurz und konkret, verzichte auf ausführliche Nebenrechnungen (z.B. keine Vergleichspreise für Einzelkomponenten wie Austauschmotoren) – die Haupttabelle und 2-3 Beispielangebote sind wichtiger als lange Zusatzerklärungen.';
+  prompt += ' WICHTIG: Maximal 200 Wörter insgesamt für diese drei Abschnitte. Fasse dich in der Einschätzung kurz und konkret, verzichte auf ausführliche Nebenrechnungen (z.B. keine Vergleichspreise für Einzelkomponenten wie Austauschmotoren) – die Haupttabelle und 2-3 Beispielangebote sind wichtiger als lange Zusatzerklärungen.\n\n';
+
+  prompt += '### WATCHLIST_DATEN\n';
+  prompt += 'Gib zusätzlich ganz am Ende bis zu 5 der konkretesten gefundenen Einzelangebote mit direkter URL, EINE ZEILE PRO ANGEBOT, in EXAKT diesem Format (Pipe-getrennt, keine Leerzeichen um die Pipes außer nach dem letzten):\n';
+  prompt += 'Titel kurz|Preis in € ohne Punkt/Komma nur Zahl|Plattform|URL\n';
+  prompt += 'Nur Angebote aufnehmen, für die du eine echte, direkt aufrufbare URL zur Einzelanzeige hast (keine Suchergebnis-URLs, keine Kategorieseiten). Wenn du für ein Angebot keine URL hast, lasse es hier weg. Wenn du gar keine URLs findest, gib diesen Abschnitt leer aus (nur die Überschrift, keine Zeilen).';
+
   return prompt;
 }
 
 // ══ EINFACHER MARKDOWN-RENDERER (Überschriften, Tabellen, Listen, Fett) ══
+// ══ WATCHLIST (Top-5 Vergleichsangebote mit URL, zur späteren Wiedervorlage) ══
+function parseWatchlistFromText(text) {
+  var match = text.match(/###\s*WATCHLIST_DATEN\s*\n([\s\S]*)$/i);
+  var visibleText = text.replace(/###\s*WATCHLIST_DATEN[\s\S]*$/i, '').trim();
+  var candidates = [];
+  if (match) {
+    var lines = match[1].split('\n');
+    lines.forEach(function(line) {
+      var parts = line.split('|').map(function(p) { return p.trim(); });
+      if (parts.length !== 4) return;
+      var titel = parts[0], preis = parts[1], plattform = parts[2], url = parts[3];
+      if (!titel || !url || url.indexOf('http') !== 0) return;
+      candidates.push({ titel: titel, preis: preis, plattform: plattform, url: url });
+    });
+  }
+  return { visibleText: visibleText, candidates: candidates.slice(0, 5) };
+}
+
+function renderWatchlistCandidates(containerId, candidates, query) {
+  var container = document.getElementById(containerId);
+  container.innerHTML = '';
+  if (!candidates || candidates.length === 0) return;
+
+  var header = document.createElement('div');
+  header.style.cssText = 'font-size:12px;font-weight:700;opacity:.7;margin-bottom:8px;padding-top:10px;border-top:1px solid var(--border)';
+  header.textContent = '📌 Interessant? Zur Wiedervorlage in ein paar Tagen merken:';
+  container.appendChild(header);
+
+  candidates.forEach(function(c) {
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)';
+
+    var info = document.createElement('div');
+    info.style.cssText = 'flex:1;min-width:0';
+    info.innerHTML = '<div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + c.titel + '</div>' +
+      '<div style="font-size:11px;opacity:.6">' + (c.preis ? c.preis + ' €' : '') + ' · ' + c.plattform + '</div>';
+
+    var openBtn = document.createElement('button');
+    openBtn.className = 'btn btn-ghost';
+    openBtn.textContent = '🔗';
+    openBtn.style.cssText = 'font-size:12px;padding:6px 9px;flex:0 0 auto';
+    openBtn.onclick = function() { window.open(c.url, '_blank'); };
+
+    var watchBtn = document.createElement('button');
+    watchBtn.className = 'btn btn-ghost';
+    watchBtn.textContent = '📌';
+    watchBtn.title = 'Zur Wiedervorlage merken';
+    watchBtn.style.cssText = 'font-size:12px;padding:6px 9px;flex:0 0 auto';
+    watchBtn.onclick = function() {
+      addBoardEntryWatch(c, query);
+      watchBtn.textContent = '✅';
+      watchBtn.disabled = true;
+    };
+
+    row.appendChild(info); row.appendChild(openBtn); row.appendChild(watchBtn);
+    container.appendChild(row);
+  });
+}
+
+function addBoardEntryWatch(candidate, query) {
+  var bid = getBrowserId();
+  var wiedervorlage = new Date();
+  wiedervorlage.setDate(wiedervorlage.getDate() + 5);
+
+  var entry = {
+    browser_id: bid,
+    titel: candidate.titel + (query ? ' (Vergleich: ' + query + ')' : ''),
+    plattform: candidate.plattform,
+    preis: candidate.preis,
+    eingestellt_am: new Date().toISOString().substring(0, 10),
+    status: 'Beobachtung',
+    link: candidate.url,
+    notiz: 'Wiedervorlage ab ' + wiedervorlage.toLocaleDateString('de-DE')
+  };
+  if (!CFG.sbUrl || !CFG.sbKey) return;
+  fetch(CFG.sbUrl + '/rest/v1/teilepilot_board', {
+    method: 'POST',
+    headers: sbHeaders(),
+    body: JSON.stringify(entry)
+  }).catch(function() {});
+}
+
 function markdownToHtml(md) {
   var lines = md.split('\n');
   var html = '';
@@ -1565,7 +1672,9 @@ function checkMarketPricePre() {
         .join('\n');
       if (!text) throw new Error('KI hat keine Marktanalyse zurückgegeben.');
 
-      document.getElementById('preCheckResultContent').innerHTML = markdownToHtml(text);
+      var parsed = parseWatchlistFromText(text);
+      document.getElementById('preCheckResultContent').innerHTML = markdownToHtml(parsed.visibleText);
+      renderWatchlistCandidates('preCheckWatchlist', parsed.candidates, query);
       document.getElementById('preCheckResult').classList.add('show');
       document.getElementById('preCheckProgress').style.display = 'none';
       document.getElementById('preCheckStatus').style.display = 'none';
@@ -1575,8 +1684,9 @@ function checkMarketPricePre() {
       // Ergebnis lokal sichern, damit es einen Reload/Schließen der Seite übersteht
       // Persist result locally so it survives a reload/closing the page
       try {
-        localStorage.setItem('tp_last_market_check', JSON.stringify({ query: query, text: text, datum: new Date().toLocaleString('de-DE') }));
+        localStorage.setItem('tp_last_market_check', JSON.stringify({ query: query, text: parsed.visibleText, candidates: parsed.candidates, datum: new Date().toLocaleString('de-DE') }));
       } catch(e) {}
+      saveMarketCheckToArchiv(query, parsed.visibleText, parsed.candidates);
     })
     .catch(function(err) {
       clearTimeout(timeoutId);
@@ -1635,11 +1745,14 @@ function checkMarketPrice() {
         .join('\n');
       if (!text) throw new Error('KI hat keine Marktanalyse zurückgegeben.');
 
-      document.getElementById('marketResultContent').innerHTML = markdownToHtml(text);
+      var parsed = parseWatchlistFromText(text);
+      document.getElementById('marketResultContent').innerHTML = markdownToHtml(parsed.visibleText);
+      renderWatchlistCandidates('marketWatchlist', parsed.candidates, query);
       document.getElementById('marketResult').classList.add('show');
       document.getElementById('marketProgress').style.display = 'none';
       document.getElementById('marketStatus').style.display = 'none';
       btn.disabled = false;
+      saveMarketCheckToArchiv(query, parsed.visibleText, parsed.candidates);
     })
     .catch(function(err) {
       clearTimeout(timeoutId);
@@ -1951,13 +2064,24 @@ function deleteSelectedInserat() {
 }
 
 // ══ ARCHIV-TAB ══
+var archivView = 'inserate';
+
+function switchArchivView(view) {
+  archivView = view;
+  document.getElementById('archivFilter-inserate').classList.toggle('active', view === 'inserate');
+  document.getElementById('archivFilter-markt').classList.toggle('active', view === 'markt');
+  renderArchivList();
+}
+
 function renderArchivList() {
+  if (archivView === 'markt') { renderMarketCheckArchivList(); return; }
+
   var list = document.getElementById('archivList');
   var empty = document.getElementById('archivEmpty');
   var inserate = getSavedInserate();
   list.innerHTML = '';
 
-  if (inserate.length === 0) { empty.style.display = 'block'; return; }
+  if (inserate.length === 0) { empty.style.display = 'block'; empty.textContent = 'Noch keine Anzeigen gespeichert.'; return; }
   empty.style.display = 'none';
 
   inserate.forEach(function(ins) {
@@ -2004,6 +2128,70 @@ function renderArchivList() {
   });
 }
 
+function renderMarketCheckArchivList() {
+  var list = document.getElementById('archivList');
+  var empty = document.getElementById('archivEmpty');
+  var checks = getSavedMarketChecks();
+  list.innerHTML = '';
+
+  if (checks.length === 0) { empty.style.display = 'block'; empty.textContent = 'Noch keine Marktchecks gespeichert.'; return; }
+  empty.style.display = 'none';
+
+  checks.forEach(function(mc) {
+    var card = document.createElement('div');
+    card.style.cssText = 'background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;margin-bottom:12px';
+
+    var head = document.createElement('div');
+    head.style.cssText = 'display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px';
+    head.innerHTML = '<div><div style="font-weight:700;font-size:14px">🔍 ' + mc.query + '</div><div style="font-size:12px;opacity:.5;margin-top:2px">' + mc.datum + (mc.candidates && mc.candidates.length ? ' · ' + mc.candidates.length + ' Angebote gemerkt' : '') + '</div></div>';
+
+    var actions = document.createElement('div');
+    actions.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;flex:0 0 auto';
+
+    var viewBtn = document.createElement('button');
+    viewBtn.className = 'btn btn-ghost';
+    viewBtn.textContent = '👁️';
+    viewBtn.title = 'Anzeigen';
+    viewBtn.style.cssText = 'font-size:12px;padding:6px 10px';
+    viewBtn.onclick = function() { toggleMarketCheckDetail(card, mc); };
+
+    var pdfBtn = document.createElement('button');
+    pdfBtn.className = 'btn btn-ghost';
+    pdfBtn.textContent = '📄 PDF';
+    pdfBtn.style.cssText = 'font-size:12px;padding:6px 10px';
+    pdfBtn.onclick = function() { exportMarketCheckPdf(mc); };
+
+    var delBtn = document.createElement('button');
+    delBtn.className = 'btn btn-ghost';
+    delBtn.textContent = '🗑️';
+    delBtn.title = 'Löschen';
+    delBtn.style.cssText = 'font-size:12px;padding:6px 10px';
+    delBtn.onclick = function() {
+      if (!confirm('Diesen gespeicherten Marktcheck wirklich löschen?')) return;
+      var updated = getSavedMarketChecks().filter(function(x) { return x.id !== mc.id; });
+      localStorage.setItem('tp_market_checks', JSON.stringify(updated));
+      renderArchivList();
+    };
+
+    actions.appendChild(viewBtn); actions.appendChild(pdfBtn); actions.appendChild(delBtn);
+    head.appendChild(actions);
+    card.appendChild(head);
+    list.appendChild(card);
+  });
+}
+
+function toggleMarketCheckDetail(card, mc) {
+  var existing = card.querySelector('.archiv-detail');
+  if (existing) { existing.remove(); return; }
+  var detail = document.createElement('div');
+  detail.className = 'archiv-detail';
+  detail.style.cssText = 'margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:13px;line-height:1.6';
+  detail.innerHTML = markdownToHtml(mc.text);
+  card.appendChild(detail);
+}
+
+
+
 function toggleArchivDetail(card, ins) {
   var existing = card.querySelector('.archiv-detail');
   if (existing) { existing.remove(); return; }
@@ -2029,6 +2217,59 @@ function exportArchivPdf(ins) {
   if (ins.fillHelp) {
     win.document.write('<h1 style="margin-top:30px">Fahrzeugdaten</h1>');
     win.document.write('<pre>' + ins.fillHelp.replace(/</g, '&lt;') + '</pre>');
+  }
+  win.document.write('<div class="footer">Erstellt mit AnzeigenAutopilot · anzeigenautopilot.de</div>');
+  win.document.write('</body></html>');
+  win.document.close();
+}
+
+function printCurrentMarketCheck(contentId) {
+  var content = document.getElementById(contentId);
+  if (!content || !content.innerHTML.trim()) { alert('Noch keine Marktanalyse vorhanden.'); return; }
+  var win = window.open('', '_blank');
+  win.document.write('<html><head><title>Marktanalyse</title><style>');
+  win.document.write('body{font-family:Arial,sans-serif;max-width:700px;margin:40px auto;padding:0 20px;color:#111;line-height:1.7}');
+  win.document.write('table{width:100%;border-collapse:collapse;margin-bottom:16px}td{padding:6px 8px;border-bottom:1px solid #ddd}');
+  win.document.write('.footer{margin-top:40px;font-size:11px;color:#999;border-top:1px solid #eee;padding-top:10px}');
+  win.document.write('</style></head><body>');
+  win.document.write('<h1 style="font-size:18px;border-bottom:2px solid #f59e0b;padding-bottom:8px;margin-bottom:20px">Marktanalyse</h1>');
+  win.document.write(content.innerHTML);
+  win.document.write('<div class="footer">Erstellt mit AnzeigenAutopilot · anzeigenautopilot.de</div>');
+  win.document.write('</body></html>');
+  win.document.close();
+}
+
+// ══ MARKTCHECK-ARCHIV ══
+function getSavedMarketChecks() {
+  try { return JSON.parse(localStorage.getItem('tp_market_checks') || '[]'); } catch(e) { return []; }
+}
+
+function saveMarketCheckToArchiv(query, text, candidates) {
+  var id = 'mc_' + Date.now();
+  var checks = getSavedMarketChecks();
+  checks.unshift({ id: id, query: query, text: text, candidates: candidates || [], datum: new Date().toLocaleDateString('de-DE') });
+  if (checks.length > 20) checks = checks.slice(0, 20); // max 20
+  localStorage.setItem('tp_market_checks', JSON.stringify(checks));
+}
+
+function exportMarketCheckPdf(mc) {
+  var win = window.open('', '_blank');
+  win.document.write('<html><head><title>Marktanalyse – ' + mc.query + '</title><style>');
+  win.document.write('body{font-family:Arial,sans-serif;max-width:700px;margin:40px auto;padding:0 20px;color:#111;line-height:1.7}');
+  win.document.write('h1{font-size:18px;border-bottom:2px solid #f59e0b;padding-bottom:8px;margin-bottom:20px}');
+  win.document.write('pre{white-space:pre-wrap;font-family:inherit;font-size:14px}');
+  win.document.write('ul{padding-left:20px}li{margin-bottom:6px}');
+  win.document.write('.footer{margin-top:40px;font-size:11px;color:#999;border-top:1px solid #eee;padding-top:10px}');
+  win.document.write('</style></head><body>');
+  win.document.write('<h1>Marktanalyse – ' + mc.query + '</h1>');
+  win.document.write('<div style="font-size:12px;color:#888;margin-bottom:16px">Gespeichert am ' + mc.datum + '</div>');
+  win.document.write('<pre>' + mc.text.replace(/</g, '&lt;') + '</pre>');
+  if (mc.candidates && mc.candidates.length) {
+    win.document.write('<h1 style="margin-top:30px">Beobachtete Angebote</h1><ul>');
+    mc.candidates.forEach(function(c) {
+      win.document.write('<li>' + c.titel + ' – ' + (c.preis ? c.preis + ' €' : '') + ' (' + c.plattform + ')<br><a href="' + c.url + '">' + c.url + '</a></li>');
+    });
+    win.document.write('</ul>');
   }
   win.document.write('<div class="footer">Erstellt mit AnzeigenAutopilot · anzeigenautopilot.de</div>');
   win.document.write('</body></html>');
@@ -2115,6 +2356,7 @@ function filterBoard(status) {
 
 var BOARD_STATUS_COLORS = {
   'Aktiv': '#22c55e',
+  'Beobachtung': '#c084fc',
   'Reserviert': '#f59e0b',
   'Verkauft': '#60a5fa',
   'Abgelaufen/Beendet': '#94a3b8'
@@ -2160,7 +2402,7 @@ function renderBoardList() {
 
       var statusSelect = document.createElement('select');
       statusSelect.style.cssText = 'background:var(--surface);border:1px solid var(--border);color:' + (BOARD_STATUS_COLORS[entry.status] || 'var(--text)') + ';font-weight:700;font-size:12px;padding:5px 8px;border-radius:8px;margin-bottom:6px';
-      ['Aktiv','Reserviert','Verkauft','Abgelaufen/Beendet'].forEach(function(s) {
+      ['Aktiv','Beobachtung','Reserviert','Verkauft','Abgelaufen/Beendet'].forEach(function(s) {
         var opt = document.createElement('option');
         opt.value = s; opt.textContent = s;
         if (s === entry.status) opt.selected = true;
@@ -2201,9 +2443,73 @@ function renderBoardList() {
         linkBtn.style.cssText = 'font-size:12px;padding:6px 10px;margin-top:10px';
         linkBtn.onclick = function() { window.open(entry.link, '_blank'); };
         card.appendChild(linkBtn);
+
+        if (entry.status === 'Beobachtung') {
+          var checkBtn = document.createElement('button');
+          checkBtn.className = 'btn btn-ghost';
+          checkBtn.textContent = '🔍 Jetzt prüfen (1 Credit)';
+          checkBtn.style.cssText = 'font-size:12px;padding:6px 10px;margin-top:10px;margin-left:8px';
+          checkBtn.onclick = function() { checkWatchEntry(entry, card); };
+          card.appendChild(checkBtn);
+
+          var resultDiv = document.createElement('div');
+          resultDiv.id = 'watchCheckResult-' + entry.id;
+          resultDiv.style.cssText = 'margin-top:10px;font-size:12.5px;line-height:1.5;display:none;padding-top:10px;border-top:1px solid var(--border)';
+          card.appendChild(resultDiv);
+        }
       }
 
       list.appendChild(card);
+    });
+  });
+}
+
+function checkWatchEntry(entry, card) {
+  if (currentCredits < 1) { openModal('empty'); return; }
+  var resultDiv = document.getElementById('watchCheckResult-' + entry.id);
+
+  deductCredit(1, function() {
+    resultDiv.style.display = 'block';
+    resultDiv.innerHTML = '🔍 Prüfe, ob die Anzeige noch aktiv ist …';
+
+    var prompt = 'Prüfe diese konkrete Kleinanzeige/Verkaufsanzeige unter der URL "' + entry.link + '". ';
+    prompt += 'Recherchiere, ob diese Anzeige aktuell noch aktiv/online ist, und falls ja, ob sich der Preis gegenüber ' + (entry.preis ? entry.preis + ' €' : 'dem ursprünglichen Preis') + ' geändert hat. ';
+    prompt += 'Antworte in maximal 3 Sätzen auf Deutsch: (1) Ist die Anzeige noch aktiv oder wurde sie offenbar entfernt/verkauft? (2) Falls noch aktiv, hat sich der Preis geändert? (3) Kurze Einschätzung was das für den Verkäufer bedeutet (z.B. "Anzeige ist nach 5 Tagen verschwunden, deutet auf zügigen Verkauf zu diesem Preissegment hin").';
+
+    var controller = new AbortController();
+    var timeoutId = setTimeout(function() { controller.abort(); }, 55000);
+
+    fetch(CFG.sbUrl + '/functions/v1/claude-proxy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + CFG.sbKey },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 500,
+        messages: [{ role: 'user', content: prompt }],
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }]
+      }),
+      signal: controller.signal
+    })
+    .then(function(r) {
+      clearTimeout(timeoutId);
+      if (!r.ok) { return r.text().then(function(t) { throw new Error('Server ' + r.status + ': ' + t.substring(0, 200)); }); }
+      return r.json();
+    })
+    .then(function(data) {
+      if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+      var text = (data.content || [])
+        .filter(function(b) { return b.type === 'text'; })
+        .map(function(b) { return b.text; })
+        .join('\n');
+      resultDiv.innerHTML = (text || 'Keine Antwort erhalten.').replace(/\n/g, '<br>');
+    })
+    .catch(function(err) {
+      clearTimeout(timeoutId);
+      var msg = err.name === 'AbortError' ? 'Timeout – bitte nochmal versuchen.' : ('Fehler: ' + err.message);
+      resultDiv.innerHTML = '⚠️ ' + msg;
+      currentCredits = currentCredits + 1;
+      updateCreditDisplay();
+      syncCredits(getBrowserId(), 1);
     });
   });
 }
@@ -2376,6 +2682,7 @@ function restoreLastMarketCheck() {
     if (!saved || !saved.text) return;
     var content = document.getElementById('preCheckResultContent');
     content.innerHTML = '<div style="font-size:11px;opacity:.5;margin-bottom:10px">📌 Letztes Ergebnis, gespeichert am ' + saved.datum + ' (' + saved.query + ')</div>' + markdownToHtml(saved.text);
+    if (saved.candidates && saved.candidates.length) renderWatchlistCandidates('preCheckWatchlist', saved.candidates, saved.query);
     document.getElementById('preCheckResult').classList.add('show');
   } catch(e) {}
 }
