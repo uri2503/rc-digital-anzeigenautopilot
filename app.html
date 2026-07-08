@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AnzeigenAutopilot – KI-Assistent für Kleinanzeigen</title>
-<!-- build: 2026-07-08-3 -->
+<!-- build: 2026-07-08-5 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -226,7 +226,36 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
         <div class="field" style="margin-bottom:0">
           <label>Marke</label>
-          <input type="text" id="vdMarke" placeholder="z.B. Porsche">
+          <select id="vdMarke" onchange="toggleMarkeAndere()">
+            <option value="">– bitte wählen –</option>
+            <option>Mercedes-Benz</option>
+            <option>BMW</option>
+            <option>Audi</option>
+            <option>Volkswagen</option>
+            <option>Porsche</option>
+            <option>Opel</option>
+            <option>Ford</option>
+            <option>Škoda</option>
+            <option>Seat</option>
+            <option>Volvo</option>
+            <option>Renault</option>
+            <option>Peugeot</option>
+            <option>Citroën</option>
+            <option>Fiat</option>
+            <option>Toyota</option>
+            <option>Honda</option>
+            <option>Mazda</option>
+            <option>Nissan</option>
+            <option>Hyundai</option>
+            <option>Kia</option>
+            <option>Mini</option>
+            <option>Jeep</option>
+            <option>Land Rover</option>
+            <option>Jaguar</option>
+            <option>Smart</option>
+            <option value="__andere__">Andere Marke …</option>
+          </select>
+          <input type="text" id="vdMarkeAndere" placeholder="Marke eingeben" style="display:none;margin-top:8px">
         </div>
         <div class="field" style="margin-bottom:0">
           <label>Modell</label>
@@ -234,7 +263,10 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
         </div>
         <div class="field" style="margin-bottom:0">
           <label>Erstzulassung</label>
-          <input type="text" id="vdErstzulassung" placeholder="z.B. 02/2008">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <select id="vdErstzulassungMonat"></select>
+            <select id="vdErstzulassungJahr"></select>
+          </div>
         </div>
         <div class="field" style="margin-bottom:0">
           <label>Kilometerstand</label>
@@ -246,7 +278,10 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
         </div>
         <div class="field" style="margin-bottom:0">
           <label>HU bis</label>
-          <input type="text" id="vdHu" placeholder="z.B. 03/2027">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <select id="vdHuMonat"></select>
+            <select id="vdHuJahr"></select>
+          </div>
         </div>
         <div class="field" style="margin-bottom:0">
           <label>Getriebe</label>
@@ -302,7 +337,10 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
       <div class="result-box" id="preCheckResult" style="margin-top:12px">
         <div class="result-header">
           <span class="result-label">Marktanalyse</span>
-          <button class="btn btn-ghost" onclick="printCurrentMarketCheck('preCheckResultContent')" style="font-size:12px;padding:6px 12px">🖨️</button>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-ghost" onclick="printCurrentMarketCheck('preCheck')" style="font-size:13px;padding:9px 14px">🖨️ Drucken</button>
+            <button class="btn btn-ghost" onclick="exportCurrentMarketCheckPdf('preCheck')" style="font-size:13px;padding:9px 14px">📄 PDF</button>
+          </div>
         </div>
         <div id="preCheckResultContent" style="font-size:14px;line-height:1.6"></div>
         <div id="preCheckWatchlist" style="margin-top:14px"></div>
@@ -429,7 +467,10 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
       <div class="result-box" id="marketResult" style="margin-top:12px">
         <div class="result-header">
           <span class="result-label">Marktpreis-Analyse</span>
-          <button class="btn btn-ghost" onclick="printCurrentMarketCheck('marketResultContent')" style="font-size:12px;padding:6px 12px">🖨️</button>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-ghost" onclick="printCurrentMarketCheck('market')" style="font-size:13px;padding:9px 14px">🖨️ Drucken</button>
+            <button class="btn btn-ghost" onclick="exportCurrentMarketCheckPdf('market')" style="font-size:13px;padding:9px 14px">📄 PDF</button>
+          </div>
         </div>
         <div id="marketResultContent" style="font-size:14px;line-height:1.6"></div>
         <div id="marketWatchlist" style="margin-top:14px"></div>
@@ -1128,6 +1169,61 @@ function expandMercedesExtras() {
   document.getElementById('mercedesExtrasIcon').textContent = '▾';
 }
 
+// ══ FAHRZEUGDETAILS: MARKE / MONAT+JAHR HELFER ══
+function toggleMarkeAndere() {
+  var sel = document.getElementById('vdMarke');
+  var andere = document.getElementById('vdMarkeAndere');
+  andere.style.display = sel.value === '__andere__' ? 'block' : 'none';
+  if (sel.value !== '__andere__') andere.value = '';
+}
+
+function getVdMarke() {
+  var sel = document.getElementById('vdMarke');
+  if (sel.value === '__andere__') return document.getElementById('vdMarkeAndere').value.trim();
+  return sel.value;
+}
+
+function populateMonthYearSelect(monthId, yearId, yearsBack, yearsForward) {
+  var monthSel = document.getElementById(monthId);
+  var monate = ['01','02','03','04','05','06','07','08','09','10','11','12'];
+  monthSel.innerHTML = '<option value="">Monat</option>';
+  monate.forEach(function(m) {
+    var opt = document.createElement('option');
+    opt.value = m; opt.textContent = m;
+    monthSel.appendChild(opt);
+  });
+
+  var yearSel = document.getElementById(yearId);
+  var currentYear = new Date().getFullYear();
+  yearSel.innerHTML = '<option value="">Jahr</option>';
+  for (var y = currentYear + yearsForward; y >= currentYear - yearsBack; y--) {
+    var opt2 = document.createElement('option');
+    opt2.value = y; opt2.textContent = y;
+    yearSel.appendChild(opt2);
+  }
+}
+
+function getMonthYearValue(monthId, yearId) {
+  var m = document.getElementById(monthId).value;
+  var y = document.getElementById(yearId).value;
+  if (!m && !y) return '';
+  if (m && y) return m + '/' + y;
+  return y || m; // falls nur eines gesetzt ist
+}
+
+function setMonthYearValue(monthId, yearId, value) {
+  // value im Format "MM/JJJJ" oder nur "JJJJ"
+  if (!value) return;
+  var m = value.match(/(\d{2})\/(\d{4})/);
+  if (m) {
+    document.getElementById(monthId).value = m[1];
+    document.getElementById(yearId).value = m[2];
+  } else {
+    var y = value.match(/(\d{4})/);
+    if (y) document.getElementById(yearId).value = y[1];
+  }
+}
+
 // ══ NEUES INSERAT (kompletter Reset) ══
 function resetInseratForm() {
   if (!confirm('Neues Inserat starten? Alle aktuellen Eingaben und das Ergebnis werden geleert. (Bereits gespeicherte Anzeigen im Archiv bleiben erhalten.)')) return;
@@ -1150,7 +1246,11 @@ function resetInseratForm() {
   document.getElementById('mercedesExtrasIcon').textContent = '▸';
 
   // Fahrzeugdetails-Felder
-  ['vdMarke','vdModell','vdErstzulassung','vdKm','vdHu','vdPs','vdBesonderheiten'].forEach(function(id) { document.getElementById(id).value = ''; });
+  document.getElementById('vdMarke').value = '';
+  document.getElementById('vdMarkeAndere').value = '';
+  document.getElementById('vdMarkeAndere').style.display = 'none';
+  ['vdModell','vdKm','vdPs','vdBesonderheiten'].forEach(function(id) { document.getElementById(id).value = ''; });
+  ['vdErstzulassungMonat','vdErstzulassungJahr','vdHuMonat','vdHuJahr'].forEach(function(id) { document.getElementById(id).value = ''; });
   ['vdGetriebe','vdKraftstoff','vdFahrzeugtyp','vdTueren','vdFarbe','vdMaterial','vdPlakette','vdSchadstoff','vdZustand'].forEach(function(id) { document.getElementById(id).value = ''; });
 
   // Zustand, Preis, Plattform
@@ -1243,11 +1343,11 @@ function generateInserat() {
     var factoryEquip = document.getElementById('factoryEquipInput').value;
 
     var vd = {
-      marke: document.getElementById('vdMarke').value,
+      marke: getVdMarke(),
       modell: document.getElementById('vdModell').value,
-      erstzulassung: document.getElementById('vdErstzulassung').value,
+      erstzulassung: getMonthYearValue('vdErstzulassungMonat', 'vdErstzulassungJahr'),
       km: document.getElementById('vdKm').value,
-      hu: document.getElementById('vdHu').value,
+      hu: getMonthYearValue('vdHuMonat', 'vdHuJahr'),
       getriebe: document.getElementById('vdGetriebe').value,
       kraftstoff: document.getElementById('vdKraftstoff').value,
       fahrzeugtyp: document.getElementById('vdFahrzeugtyp').value,
@@ -1428,18 +1528,21 @@ function generateInserat() {
 
 // ══ MARKTPREIS-CHECK (Web-Search, separater Call ohne Bilder) ══
 var lastMarketQuery = '';
+var currentMarketCheckData = {
+  preCheck: { query: '', text: '', candidates: [] },
+  market: { query: '', text: '', candidates: [] }
+};
 
 function buildMarketQuery() {
   // Baut eine Suchanfrage aus Marke/Modell (Fahrzeugdetails) oder aus dem generierten Titel
   // Build a search query from Marke/Modell (vehicle details) or from the generated title
-  var marke = document.getElementById('vdMarke').value;
+  var marke = getVdMarke();
   var modell = document.getElementById('vdModell').value;
   if (marke || modell) {
     var ps = document.getElementById('vdPs').value;
     var km = document.getElementById('vdKm').value;
-    var ez = document.getElementById('vdErstzulassung').value;
-    var ezYear = ez.match(/(\d{4})/);
-    return [marke, modell, ezYear ? 'Baujahr ' + ezYear[1] : '', ps ? ps + ' PS' : '', km ? km + ' km' : ''].filter(Boolean).join(' ').trim();
+    var ezJahr = document.getElementById('vdErstzulassungJahr').value;
+    return [marke, modell, ezJahr ? 'Baujahr ' + ezJahr : '', ps ? ps + ' PS' : '', km ? km + ' km' : ''].filter(Boolean).join(' ').trim();
   }
   if (!lastInseratRaw) return '';
   var titel = extractInseratTitel(lastInseratRaw);
@@ -1467,15 +1570,34 @@ function buildMarketPrompt(query, wunschpreis, zusatzInfo) {
   prompt += ' WICHTIG: Maximal 200 Wörter insgesamt für diese drei Abschnitte. Fasse dich in der Einschätzung kurz und konkret, verzichte auf ausführliche Nebenrechnungen (z.B. keine Vergleichspreise für Einzelkomponenten wie Austauschmotoren) – die Haupttabelle und 2-3 Beispielangebote sind wichtiger als lange Zusatzerklärungen.\n\n';
 
   prompt += '### WATCHLIST_DATEN\n';
-  prompt += 'Gib zusätzlich ganz am Ende bis zu 5 der konkretesten gefundenen Einzelangebote mit direkter URL, EINE ZEILE PRO ANGEBOT, in EXAKT diesem Format (Pipe-getrennt, keine Leerzeichen um die Pipes außer nach dem letzten):\n';
+  prompt += 'Gib zusätzlich ganz am Ende möglichst genau 3 konkrete Einzelangebote JE Plattform an (also bis zu 3 von Kleinanzeigen, bis zu 3 von mobile.de, bis zu 3 von AutoScout24 – macht bis zu 9 Angebote insgesamt), damit du gleich eine gute Auswahl über alle Plattformen hinweg hast, aus der du dir später bis zu 5 zur Wiedervorlage merken kannst. EINE ZEILE PRO ANGEBOT, in EXAKT diesem Format (Pipe-getrennt, keine Leerzeichen um die Pipes außer nach dem letzten):\n';
   prompt += 'Titel kurz|Preis in € ohne Punkt/Komma nur Zahl|Plattform|URL\n';
-  prompt += 'Nur Angebote aufnehmen, für die du eine echte, direkt aufrufbare URL zur Einzelanzeige hast (keine Suchergebnis-URLs, keine Kategorieseiten). Wenn du für ein Angebot keine URL hast, lasse es hier weg. Wenn du gar keine URLs findest, gib diesen Abschnitt leer aus (nur die Überschrift, keine Zeilen).';
+  prompt += 'KRITISCH WICHTIG: Die URL muss zwingend zur genannten Plattform-Domain passen und eine echte Einzelanzeige sein, kein Suchergebnis, keine Kategorieseite, kein Drittportal: ';
+  prompt += 'bei Plattform "Kleinanzeigen" muss die URL mit https://www.kleinanzeigen.de/ beginnen, bei "mobile.de" mit https://www.mobile.de/, bei "AutoScout24" mit https://www.autoscout24.de/. ';
+  prompt += 'Verwende NIEMALS URLs von Drittportalen, Preisvergleichsseiten, Aggregatoren oder Fahrzeugbewertungsseiten (z.B. autouncle.de, mobile.de-Preisanalysen, Vergleichsportale) – auch nicht, wenn dort ein passendes Fahrzeug zu sehen ist. Wenn du für eine Plattform keine passende URL findest, lasse diese Plattform in der Liste einfach weg statt eine unpassende URL einzusetzen – es müssen nicht zwingend alle 3 Plattformen vertreten sein, aber bemühe dich aktiv darum, für jede Plattform mindestens 1-2 echte Angebote zu finden, bevor du eine Plattform ganz auslässt. Wenn du gar keine passenden URLs findest, gib diesen Abschnitt leer aus (nur die Überschrift, keine Zeilen).';
 
   return prompt;
 }
 
 // ══ EINFACHER MARKDOWN-RENDERER (Überschriften, Tabellen, Listen, Fett) ══
 // ══ WATCHLIST (Top-5 Vergleichsangebote mit URL, zur späteren Wiedervorlage) ══
+var PLATTFORM_DOMAINS = {
+  'Kleinanzeigen': 'kleinanzeigen.de',
+  'mobile.de': 'mobile.de',
+  'AutoScout24': 'autoscout24.de'
+};
+
+function urlMatchesPlattform(url, plattform) {
+  var expectedDomain = PLATTFORM_DOMAINS[plattform];
+  if (!expectedDomain) return false; // unbekannte Plattform-Angabe → sicherheitshalber ablehnen
+  try {
+    var host = new URL(url).hostname.toLowerCase();
+    return host === expectedDomain || host === 'www.' + expectedDomain;
+  } catch(e) {
+    return false;
+  }
+}
+
 function parseWatchlistFromText(text) {
   var match = text.match(/###\s*WATCHLIST_DATEN\s*\n([\s\S]*)$/i);
   var visibleText = text.replace(/###\s*WATCHLIST_DATEN[\s\S]*$/i, '').trim();
@@ -1487,10 +1609,13 @@ function parseWatchlistFromText(text) {
       if (parts.length !== 4) return;
       var titel = parts[0], preis = parts[1], plattform = parts[2], url = parts[3];
       if (!titel || !url || url.indexOf('http') !== 0) return;
+      // Absicherung: URL muss zur angegebenen Plattform-Domain passen, sonst verwerfen
+      // Safeguard: URL must match the stated platform domain, otherwise discard
+      if (!urlMatchesPlattform(url, plattform)) return;
       candidates.push({ titel: titel, preis: preis, plattform: plattform, url: url });
     });
   }
-  return { visibleText: visibleText, candidates: candidates.slice(0, 5) };
+  return { visibleText: visibleText, candidates: candidates.slice(0, 9) };
 }
 
 function renderWatchlistCandidates(containerId, candidates, query) {
@@ -1500,41 +1625,75 @@ function renderWatchlistCandidates(containerId, candidates, query) {
 
   var header = document.createElement('div');
   header.style.cssText = 'font-size:12px;font-weight:700;opacity:.7;margin-bottom:8px;padding-top:10px;border-top:1px solid var(--border)';
-  header.textContent = '📌 Interessant? Zur Wiedervorlage in ein paar Tagen merken:';
+  header.textContent = '📌 ' + candidates.length + ' Vergleichsangebote gefunden – such dir bis zu 5 aus, die du in ein paar Tagen erneut prüfen willst:';
   container.appendChild(header);
 
+  // Nach Plattform gruppieren, damit die Streuung über alle 3 Plattformen sichtbar wird
+  // Group by platform so the spread across all 3 platforms is visible
+  var groups = {};
+  var order = [];
   candidates.forEach(function(c) {
-    var row = document.createElement('div');
-    row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)';
+    if (!groups[c.plattform]) { groups[c.plattform] = []; order.push(c.plattform); }
+    groups[c.plattform].push(c);
+  });
 
-    var info = document.createElement('div');
-    info.style.cssText = 'flex:1;min-width:0';
-    info.innerHTML = '<div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + c.titel + '</div>' +
-      '<div style="font-size:11px;opacity:.6">' + (c.preis ? c.preis + ' €' : '') + ' · ' + c.plattform + '</div>';
+  order.forEach(function(plattform) {
+    var groupHeader = document.createElement('div');
+    groupHeader.style.cssText = 'font-size:11px;font-weight:700;opacity:.5;margin-top:10px;margin-bottom:4px';
+    groupHeader.textContent = plattform;
+    container.appendChild(groupHeader);
 
-    var openBtn = document.createElement('button');
-    openBtn.className = 'btn btn-ghost';
-    openBtn.textContent = '🔗';
-    openBtn.style.cssText = 'font-size:12px;padding:6px 9px;flex:0 0 auto';
-    openBtn.onclick = function() { window.open(c.url, '_blank'); };
+    groups[plattform].forEach(function(c) {
+      var row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)';
 
-    var watchBtn = document.createElement('button');
-    watchBtn.className = 'btn btn-ghost';
-    watchBtn.textContent = '📌';
-    watchBtn.title = 'Zur Wiedervorlage merken';
-    watchBtn.style.cssText = 'font-size:12px;padding:6px 9px;flex:0 0 auto';
-    watchBtn.onclick = function() {
-      addBoardEntryWatch(c, query);
-      watchBtn.textContent = '✅';
-      watchBtn.disabled = true;
-    };
+      var info = document.createElement('div');
+      info.style.cssText = 'flex:1;min-width:0';
+      info.innerHTML = '<div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + c.titel + '</div>' +
+        '<div style="font-size:11px;opacity:.6">' + (c.preis ? c.preis + ' €' : '') + '</div>';
 
-    row.appendChild(info); row.appendChild(openBtn); row.appendChild(watchBtn);
-    container.appendChild(row);
+      var openBtn = document.createElement('button');
+      openBtn.className = 'btn btn-ghost';
+      openBtn.textContent = '🔗';
+      openBtn.style.cssText = 'font-size:12px;padding:6px 9px;flex:0 0 auto';
+      openBtn.onclick = function() { window.open(c.url, '_blank'); };
+
+      var watchBtn = document.createElement('button');
+      watchBtn.className = 'btn btn-ghost';
+      watchBtn.textContent = '📌';
+      watchBtn.title = 'Zur Wiedervorlage merken';
+      watchBtn.style.cssText = 'font-size:12px;padding:6px 9px;flex:0 0 auto';
+      watchBtn.onclick = function() {
+        openWatchAssignDialog(c, query, watchBtn);
+      };
+
+      row.appendChild(info); row.appendChild(openBtn); row.appendChild(watchBtn);
+      container.appendChild(row);
+    });
   });
 }
 
-function addBoardEntryWatch(candidate, query) {
+function openWatchAssignDialog(candidate, query, watchBtn) {
+  getBoardEntries(function(entries) {
+    var hauptAnzeigen = entries.filter(function(e) { return e.status !== 'Beobachtung'; });
+    if (hauptAnzeigen.length === 0) {
+      addBoardEntryWatch(candidate, query, null);
+      watchBtn.textContent = '✅';
+      watchBtn.disabled = true;
+      return;
+    }
+    var optionsText = hauptAnzeigen.map(function(e, i) { return (i + 1) + ': ' + e.titel; }).join('\n');
+    var choice = prompt('Zu welcher Anzeige gehört dieser Vergleich?\n\n' + optionsText + '\n\nNummer eingeben, oder leer lassen für "ohne Zuordnung":');
+    if (choice === null) return; // abgebrochen
+    var idx = parseInt(choice, 10) - 1;
+    var parentId = (idx >= 0 && idx < hauptAnzeigen.length) ? hauptAnzeigen[idx].id : null;
+    addBoardEntryWatch(candidate, query, parentId);
+    watchBtn.textContent = '✅';
+    watchBtn.disabled = true;
+  });
+}
+
+function addBoardEntryWatch(candidate, query, parentId) {
   var bid = getBrowserId();
   var wiedervorlage = new Date();
   wiedervorlage.setDate(wiedervorlage.getDate() + 5);
@@ -1547,7 +1706,8 @@ function addBoardEntryWatch(candidate, query) {
     eingestellt_am: new Date().toISOString().substring(0, 10),
     status: 'Beobachtung',
     link: candidate.url,
-    notiz: 'Wiedervorlage ab ' + wiedervorlage.toLocaleDateString('de-DE')
+    notiz: 'Wiedervorlage ab ' + wiedervorlage.toLocaleDateString('de-DE'),
+    parent_id: parentId || null
   };
   if (!CFG.sbUrl || !CFG.sbKey) return;
   fetch(CFG.sbUrl + '/rest/v1/teilepilot_board', {
@@ -1613,9 +1773,9 @@ function markdownToHtml(md) {
 function checkMarketPricePre() {
   if (currentCredits < 2) { openModal('empty'); return; }
 
-  var marke = document.getElementById('vdMarke').value.trim();
+  var marke = getVdMarke();
   var modell = document.getElementById('vdModell').value.trim();
-  var erstzulassung = document.getElementById('vdErstzulassung').value.trim();
+  var baujahr = document.getElementById('vdErstzulassungJahr').value;
   var km = document.getElementById('vdKm').value.trim();
   var ps = document.getElementById('vdPs').value.trim();
   var getriebe = document.getElementById('vdGetriebe').value;
@@ -1624,11 +1784,6 @@ function checkMarketPricePre() {
   var wunschpreis = document.getElementById('priceInput').value;
 
   if (!marke && !modell) { alert('Bitte mindestens Marke und Modell eingeben.'); return; }
-
-  // Baujahr aus Erstzulassung ableiten (z.B. "02/2008" -> "2008"), falls möglich
-  var baujahr = '';
-  var ezMatch = erstzulassung.match(/(\d{4})/);
-  if (ezMatch) baujahr = ezMatch[1];
 
   var query = [marke, modell, baujahr ? 'Baujahr ' + baujahr : '', ps ? ps + ' PS' : '', km ? km + ' km' : ''].filter(Boolean).join(' ');
   var zusatzInfoParts = [];
@@ -1653,7 +1808,7 @@ function checkMarketPricePre() {
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + CFG.sbKey },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
-        max_tokens: 2500,
+        max_tokens: 3000,
         messages: [{ role: 'user', content: prompt }],
         tools: [{ type: 'web_search_20250305', name: 'web_search' }]
       }),
@@ -1680,6 +1835,7 @@ function checkMarketPricePre() {
       document.getElementById('preCheckStatus').style.display = 'none';
       btn.disabled = false;
       document.getElementById('preCheckResult').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      currentMarketCheckData.preCheck = { query: query, text: parsed.visibleText, candidates: parsed.candidates };
 
       // Ergebnis lokal sichern, damit es einen Reload/Schließen der Seite übersteht
       // Persist result locally so it survives a reload/closing the page
@@ -1724,7 +1880,7 @@ function checkMarketPrice() {
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + CFG.sbKey },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
-        max_tokens: 2500,
+        max_tokens: 3000,
         messages: [{ role: 'user', content: prompt }],
         tools: [{ type: 'web_search_20250305', name: 'web_search' }]
       }),
@@ -1752,6 +1908,7 @@ function checkMarketPrice() {
       document.getElementById('marketProgress').style.display = 'none';
       document.getElementById('marketStatus').style.display = 'none';
       btn.disabled = false;
+      currentMarketCheckData.market = { query: query, text: parsed.visibleText, candidates: parsed.candidates };
       saveMarketCheckToArchiv(query, parsed.visibleText, parsed.candidates);
     })
     .catch(function(err) {
@@ -2223,7 +2380,8 @@ function exportArchivPdf(ins) {
   win.document.close();
 }
 
-function printCurrentMarketCheck(contentId) {
+function printCurrentMarketCheck(key) {
+  var contentId = key === 'preCheck' ? 'preCheckResultContent' : 'marketResultContent';
   var content = document.getElementById(contentId);
   if (!content || !content.innerHTML.trim()) { alert('Noch keine Marktanalyse vorhanden.'); return; }
   var win = window.open('', '_blank');
@@ -2237,6 +2395,12 @@ function printCurrentMarketCheck(contentId) {
   win.document.write('<div class="footer">Erstellt mit AnzeigenAutopilot · anzeigenautopilot.de</div>');
   win.document.write('</body></html>');
   win.document.close();
+}
+
+function exportCurrentMarketCheckPdf(key) {
+  var data = currentMarketCheckData[key];
+  if (!data || !data.text) { alert('Noch keine Marktanalyse vorhanden.'); return; }
+  exportMarketCheckPdf({ query: data.query, text: data.text, candidates: data.candidates, datum: new Date().toLocaleDateString('de-DE') });
 }
 
 // ══ MARKTCHECK-ARCHIV ══
@@ -2378,90 +2542,209 @@ function renderBoardList() {
 
   getBoardEntries(function(entries) {
     boardCache = entries;
-    var shown = boardFilterState !== 'alle' ? entries.filter(function(e) { return e.status === boardFilterState; }) : entries;
+
+    // Beobachtungen ihrer Hauptanzeige zuordnen
+    // Assign observations to their parent listing
+    var hauptAnzeigen = entries.filter(function(e) { return e.status !== 'Beobachtung'; });
+    var beobachtungen = entries.filter(function(e) { return e.status === 'Beobachtung'; });
+    var beobachtungenByParent = {};
+    var freistehendeBeobachtungen = [];
+    beobachtungen.forEach(function(b) {
+      if (b.parent_id) {
+        if (!beobachtungenByParent[b.parent_id]) beobachtungenByParent[b.parent_id] = [];
+        beobachtungenByParent[b.parent_id].push(b);
+      } else {
+        freistehendeBeobachtungen.push(b);
+      }
+    });
+
+    // Filter anwenden: bei 'Beobachtung' zeigen wir nur die freistehende Sektion + zugehörige innerhalb der Hauptkarten
+    // bei anderen Filtern nur die passenden Hauptanzeigen
+    var shownHaupt = boardFilterState === 'alle' || boardFilterState === 'Beobachtung'
+      ? hauptAnzeigen
+      : hauptAnzeigen.filter(function(e) { return e.status === boardFilterState; });
 
     list.innerHTML = '';
 
-    if (shown.length === 0) { empty.style.display = 'block'; return; }
+    var totalShown = shownHaupt.length + (boardFilterState === 'alle' || boardFilterState === 'Beobachtung' ? freistehendeBeobachtungen.length : 0);
+    if (totalShown === 0) { empty.style.display = 'block'; return; }
     empty.style.display = 'none';
 
-    shown.forEach(function(entry) {
-      var card = document.createElement('div');
-      card.style.cssText = 'background:var(--bg);border:1px solid var(--border);border-left:3px solid ' + (BOARD_STATUS_COLORS[entry.status] || 'var(--border)') + ';border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:10px';
+    shownHaupt.forEach(function(entry) {
+      list.appendChild(buildBoardCard(entry, beobachtungenByParent[entry.id] || []));
+    });
 
-      var top = document.createElement('div');
-      top.style.cssText = 'display:flex;justify-content:space-between;align-items:flex-start;gap:10px';
+    if ((boardFilterState === 'alle' || boardFilterState === 'Beobachtung') && freistehendeBeobachtungen.length > 0) {
+      var sectionHeader = document.createElement('div');
+      sectionHeader.style.cssText = 'font-size:13px;font-weight:700;opacity:.6;margin:20px 0 10px';
+      sectionHeader.textContent = '🔍 Sonstige Beobachtungen (ohne Zuordnung)';
+      list.appendChild(sectionHeader);
 
-      var left = document.createElement('div');
-      left.innerHTML = '<div style="font-weight:700;font-size:14px">' + (BOARD_PLATTFORM_ICONS[entry.plattform] || '') + ' ' + entry.titel + '</div>' +
-        '<div style="font-size:12px;opacity:.6;margin-top:3px">' + entry.plattform + (entry.preis ? ' · ' + entry.preis + ' €' : '') + ' · seit ' + entry.eingestellt_am + '</div>' +
-        (entry.notiz ? '<div style="font-size:12px;opacity:.5;margin-top:4px">📝 ' + entry.notiz + '</div>' : '');
-
-      var right = document.createElement('div');
-      right.style.cssText = 'flex:0 0 auto;text-align:right';
-
-      var statusSelect = document.createElement('select');
-      statusSelect.style.cssText = 'background:var(--surface);border:1px solid var(--border);color:' + (BOARD_STATUS_COLORS[entry.status] || 'var(--text)') + ';font-weight:700;font-size:12px;padding:5px 8px;border-radius:8px;margin-bottom:6px';
-      ['Aktiv','Beobachtung','Reserviert','Verkauft','Abgelaufen/Beendet'].forEach(function(s) {
-        var opt = document.createElement('option');
-        opt.value = s; opt.textContent = s;
-        if (s === entry.status) opt.selected = true;
-        statusSelect.appendChild(opt);
+      freistehendeBeobachtungen.forEach(function(b) {
+        list.appendChild(buildBoardCard(b, []));
       });
-      statusSelect.onchange = function() {
-        fetch(CFG.sbUrl + '/rest/v1/teilepilot_board?id=eq.' + entry.id, {
-          method: 'PATCH',
-          headers: sbHeaders(),
-          body: JSON.stringify({ status: statusSelect.value, updated_at: new Date().toISOString() })
-        }).then(function() { renderBoardList(); })
-          .catch(function() { alert('Status konnte nicht aktualisiert werden.'); });
-      };
+    }
+  });
+}
 
-      var delBtn = document.createElement('button');
-      delBtn.className = 'btn btn-ghost';
-      delBtn.textContent = '🗑️';
-      delBtn.style.cssText = 'font-size:12px;padding:5px 8px;display:block;margin-left:auto';
-      delBtn.onclick = function() {
-        if (!confirm('Diesen Board-Eintrag wirklich löschen?')) return;
-        fetch(CFG.sbUrl + '/rest/v1/teilepilot_board?id=eq.' + entry.id, {
+function buildBoardCard(entry, childObservations) {
+  var card = document.createElement('div');
+  card.style.cssText = 'background:var(--bg);border:1px solid var(--border);border-left:3px solid ' + (BOARD_STATUS_COLORS[entry.status] || 'var(--border)') + ';border-radius:var(--radius-sm);margin-bottom:10px;overflow:hidden';
+
+  var head = document.createElement('div');
+  head.style.cssText = 'padding:14px 16px;cursor:pointer;display:flex;justify-content:space-between;align-items:flex-start;gap:10px';
+
+  var left = document.createElement('div');
+  left.style.cssText = 'flex:1;min-width:0';
+  var badgeHtml = childObservations.length > 0 ? ' <span style="font-size:11px;font-weight:700;background:var(--amber-glow);color:var(--amber);padding:2px 7px;border-radius:100px">' + childObservations.length + ' Beobachtung' + (childObservations.length > 1 ? 'en' : '') + '</span>' : '';
+  left.innerHTML = '<div style="font-weight:700;font-size:14px">' + (BOARD_PLATTFORM_ICONS[entry.plattform] || '') + ' ' + entry.titel + badgeHtml + '</div>' +
+    '<div style="font-size:12px;opacity:.6;margin-top:3px">' + entry.plattform + (entry.preis ? ' · ' + entry.preis + ' €' : '') + ' · seit ' + entry.eingestellt_am + '</div>';
+
+  var statusBadge = document.createElement('div');
+  statusBadge.style.cssText = 'flex:0 0 auto;font-size:11px;font-weight:700;color:' + (BOARD_STATUS_COLORS[entry.status] || 'var(--text)') + ';padding:4px 10px;border:1px solid ' + (BOARD_STATUS_COLORS[entry.status] || 'var(--border)') + ';border-radius:100px;white-space:nowrap';
+  statusBadge.textContent = entry.status;
+
+  head.appendChild(left);
+  head.appendChild(statusBadge);
+  card.appendChild(head);
+
+  var detail = document.createElement('div');
+  detail.style.cssText = 'display:none;padding:0 16px 16px';
+
+  head.onclick = function() {
+    var isOpen = detail.style.display !== 'none';
+    detail.style.display = isOpen ? 'none' : 'block';
+  };
+
+  if (entry.notiz) {
+    var notizDiv = document.createElement('div');
+    notizDiv.style.cssText = 'font-size:12px;opacity:.6;margin-bottom:10px';
+    notizDiv.textContent = '📝 ' + entry.notiz;
+    detail.appendChild(notizDiv);
+  }
+
+  var actionsRow = document.createElement('div');
+  actionsRow.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px';
+
+  var statusSelect = document.createElement('select');
+  statusSelect.style.cssText = 'background:var(--surface);border:1px solid var(--border);color:' + (BOARD_STATUS_COLORS[entry.status] || 'var(--text)') + ';font-weight:700;font-size:12px;padding:6px 8px;border-radius:8px';
+  ['Aktiv','Beobachtung','Reserviert','Verkauft','Abgelaufen/Beendet'].forEach(function(s) {
+    var opt = document.createElement('option');
+    opt.value = s; opt.textContent = s;
+    if (s === entry.status) opt.selected = true;
+    statusSelect.appendChild(opt);
+  });
+  statusSelect.onchange = function() {
+    fetch(CFG.sbUrl + '/rest/v1/teilepilot_board?id=eq.' + entry.id, {
+      method: 'PATCH',
+      headers: sbHeaders(),
+      body: JSON.stringify({ status: statusSelect.value, updated_at: new Date().toISOString() })
+    }).then(function() { renderBoardList(); })
+      .catch(function() { alert('Status konnte nicht aktualisiert werden.'); });
+  };
+
+  var delBtn = document.createElement('button');
+  delBtn.className = 'btn btn-ghost';
+  delBtn.textContent = '🗑️ Löschen';
+  delBtn.style.cssText = 'font-size:12px;padding:6px 10px';
+  delBtn.onclick = function() {
+    if (!confirm('Diesen Board-Eintrag wirklich löschen?' + (childObservations.length > 0 ? ' Die ' + childObservations.length + ' zugeordneten Beobachtungen bleiben erhalten, verlieren aber die Zuordnung.' : ''))) return;
+    fetch(CFG.sbUrl + '/rest/v1/teilepilot_board?id=eq.' + entry.id, {
+      method: 'DELETE',
+      headers: sbHeaders()
+    }).then(function() { renderBoardList(); })
+      .catch(function() { alert('Eintrag konnte nicht gelöscht werden.'); });
+  };
+
+  actionsRow.appendChild(statusSelect);
+  actionsRow.appendChild(delBtn);
+
+  if (entry.link) {
+    var linkBtn = document.createElement('button');
+    linkBtn.className = 'btn btn-ghost';
+    linkBtn.textContent = 'Anzeige öffnen ↗';
+    linkBtn.style.cssText = 'font-size:12px;padding:6px 10px';
+    linkBtn.onclick = function() { window.open(entry.link, '_blank'); };
+    actionsRow.appendChild(linkBtn);
+
+    if (entry.status === 'Beobachtung') {
+      var checkBtn = document.createElement('button');
+      checkBtn.className = 'btn btn-ghost';
+      checkBtn.textContent = '🔍 Jetzt prüfen (1 Credit)';
+      checkBtn.style.cssText = 'font-size:12px;padding:6px 10px';
+      checkBtn.onclick = function() { checkWatchEntry(entry, detail); };
+      actionsRow.appendChild(checkBtn);
+    }
+  }
+
+  detail.appendChild(actionsRow);
+
+  if (entry.status === 'Beobachtung') {
+    var resultDiv = document.createElement('div');
+    resultDiv.id = 'watchCheckResult-' + entry.id;
+    resultDiv.style.cssText = 'margin-top:6px;font-size:12.5px;line-height:1.5;display:none;padding-top:10px;border-top:1px solid var(--border)';
+    detail.appendChild(resultDiv);
+  }
+
+  // Zugeordnete Beobachtungen als Unterliste
+  if (childObservations.length > 0) {
+    var obsHeader = document.createElement('div');
+    obsHeader.style.cssText = 'font-size:12px;font-weight:700;opacity:.6;margin-top:14px;margin-bottom:8px;padding-top:12px;border-top:1px solid var(--border)';
+    obsHeader.textContent = '🔍 Beobachtete Vergleichsangebote';
+    detail.appendChild(obsHeader);
+
+    childObservations.forEach(function(obs) {
+      var obsRow = document.createElement('div');
+      obsRow.style.cssText = 'background:var(--surface);border-radius:8px;padding:10px 12px;margin-bottom:8px;font-size:12.5px';
+      obsRow.innerHTML = '<div style="font-weight:600">' + obs.titel + '</div>' +
+        '<div style="opacity:.6;margin-top:2px">' + obs.plattform + (obs.preis ? ' · ' + obs.preis + ' €' : '') + '</div>' +
+        (obs.notiz ? '<div style="opacity:.5;margin-top:2px">📝 ' + obs.notiz + '</div>' : '');
+
+      var obsActions = document.createElement('div');
+      obsActions.style.cssText = 'display:flex;gap:6px;margin-top:8px';
+
+      if (obs.link) {
+        var obsLinkBtn = document.createElement('button');
+        obsLinkBtn.className = 'btn btn-ghost';
+        obsLinkBtn.textContent = 'Öffnen ↗';
+        obsLinkBtn.style.cssText = 'font-size:11px;padding:5px 8px';
+        obsLinkBtn.onclick = function() { window.open(obs.link, '_blank'); };
+        obsActions.appendChild(obsLinkBtn);
+
+        var obsCheckBtn = document.createElement('button');
+        obsCheckBtn.className = 'btn btn-ghost';
+        obsCheckBtn.textContent = '🔍 Prüfen (1 Credit)';
+        obsCheckBtn.style.cssText = 'font-size:11px;padding:5px 8px';
+        obsCheckBtn.onclick = function() { checkWatchEntry(obs, obsRow); };
+        obsActions.appendChild(obsCheckBtn);
+      }
+
+      var obsDelBtn = document.createElement('button');
+      obsDelBtn.className = 'btn btn-ghost';
+      obsDelBtn.textContent = '🗑️';
+      obsDelBtn.style.cssText = 'font-size:11px;padding:5px 8px';
+      obsDelBtn.onclick = function() {
+        if (!confirm('Diese Beobachtung wirklich löschen?')) return;
+        fetch(CFG.sbUrl + '/rest/v1/teilepilot_board?id=eq.' + obs.id, {
           method: 'DELETE',
           headers: sbHeaders()
         }).then(function() { renderBoardList(); })
           .catch(function() { alert('Eintrag konnte nicht gelöscht werden.'); });
       };
+      obsActions.appendChild(obsDelBtn);
 
-      right.appendChild(statusSelect);
-      right.appendChild(delBtn);
-      top.appendChild(left);
-      top.appendChild(right);
-      card.appendChild(top);
+      var obsResultDiv = document.createElement('div');
+      obsResultDiv.id = 'watchCheckResult-' + obs.id;
+      obsResultDiv.style.cssText = 'margin-top:6px;font-size:12px;line-height:1.5;display:none';
 
-      if (entry.link) {
-        var linkBtn = document.createElement('button');
-        linkBtn.className = 'btn btn-ghost';
-        linkBtn.textContent = 'Anzeige öffnen ↗';
-        linkBtn.style.cssText = 'font-size:12px;padding:6px 10px;margin-top:10px';
-        linkBtn.onclick = function() { window.open(entry.link, '_blank'); };
-        card.appendChild(linkBtn);
-
-        if (entry.status === 'Beobachtung') {
-          var checkBtn = document.createElement('button');
-          checkBtn.className = 'btn btn-ghost';
-          checkBtn.textContent = '🔍 Jetzt prüfen (1 Credit)';
-          checkBtn.style.cssText = 'font-size:12px;padding:6px 10px;margin-top:10px;margin-left:8px';
-          checkBtn.onclick = function() { checkWatchEntry(entry, card); };
-          card.appendChild(checkBtn);
-
-          var resultDiv = document.createElement('div');
-          resultDiv.id = 'watchCheckResult-' + entry.id;
-          resultDiv.style.cssText = 'margin-top:10px;font-size:12.5px;line-height:1.5;display:none;padding-top:10px;border-top:1px solid var(--border)';
-          card.appendChild(resultDiv);
-        }
-      }
-
-      list.appendChild(card);
+      obsRow.appendChild(obsActions);
+      obsRow.appendChild(obsResultDiv);
+      detail.appendChild(obsRow);
     });
-  });
+  }
+
+  card.appendChild(detail);
+  return card;
 }
 
 function checkWatchEntry(entry, card) {
@@ -2675,6 +2958,8 @@ document.getElementById('marketCheckBox').style.display = 'none';
 document.getElementById('inseratResult').classList.remove('show');
 renderInseratDropdown();
 restoreLastMarketCheck();
+populateMonthYearSelect('vdErstzulassungMonat', 'vdErstzulassungJahr', 40, 0);
+populateMonthYearSelect('vdHuMonat', 'vdHuJahr', 2, 3);
 
 function restoreLastMarketCheck() {
   try {
@@ -2684,6 +2969,7 @@ function restoreLastMarketCheck() {
     content.innerHTML = '<div style="font-size:11px;opacity:.5;margin-bottom:10px">📌 Letztes Ergebnis, gespeichert am ' + saved.datum + ' (' + saved.query + ')</div>' + markdownToHtml(saved.text);
     if (saved.candidates && saved.candidates.length) renderWatchlistCandidates('preCheckWatchlist', saved.candidates, saved.query);
     document.getElementById('preCheckResult').classList.add('show');
+    currentMarketCheckData.preCheck = { query: saved.query, text: saved.text, candidates: saved.candidates || [] };
   } catch(e) {}
 }
 
