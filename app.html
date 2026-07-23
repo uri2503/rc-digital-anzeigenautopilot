@@ -733,6 +733,24 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
     <span class="save-ind" id="settingsSaveInd" style="margin-left:12px">● gespeichert</span>
 
     <hr class="divider">
+    <p class="section-title">Wiederherstellungscode</p>
+    <p class="section-sub">Deine Credits, dein Board und dein Archiv hängen an diesem Code. Sichere ihn (z.B. in einer Notiz) – wird der Browserverlauf/die Website-Daten gelöscht, holst du damit alles zurück.</p>
+    <div class="field">
+      <label>Dein Code</label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="text" id="recoveryCodeDisplay" readonly style="flex:1">
+        <button class="btn btn-ghost" id="copyRecoveryBtn" onclick="copyRecoveryCode()" style="white-space:nowrap;font-size:12px;padding:8px 12px">Kopieren</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>Code wiederherstellen <span style="font-weight:400;opacity:.6">(nach Löschen des Browserverlaufs hier einfügen)</span></label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="text" id="recoveryCodeInput" placeholder="tp_…">
+        <button class="btn btn-ghost" onclick="restoreRecoveryCode()" style="white-space:nowrap;font-size:12px;padding:8px 12px">Wiederherstellen</button>
+      </div>
+    </div>
+
+    <hr class="divider">
     <p class="section-title" style="color:var(--red)">Danger Zone</p>
     <button class="btn btn-ghost" onclick="resetAll()" style="color:var(--red);border-color:var(--red)">🗑 Alle Daten löschen</button>
   </div>
@@ -840,6 +858,20 @@ function resetAll() {
     localStorage.clear();
     location.reload();
   }
+}
+
+// ══ WIEDERHERSTELLUNGSCODE (= Browser-ID, an der Credits/Board/Archiv hängen) ══
+function copyRecoveryCode() {
+  toClipboard(document.getElementById('recoveryCodeDisplay').value);
+  setCopied('copyRecoveryBtn');
+}
+
+function restoreRecoveryCode() {
+  var code = document.getElementById('recoveryCodeInput').value.trim();
+  if (!code) { alert('Bitte einen Code eingeben.'); return; }
+  if (!confirm('Wiederherstellungscode übernehmen? Deine aktuellen lokalen Daten auf diesem Gerät bleiben zusätzlich erhalten, die Seite wird danach neu geladen.')) return;
+  localStorage.setItem('tp_browser_id', code);
+  location.reload();
 }
 
 // ══ BROWSER ID ══
@@ -2158,15 +2190,76 @@ function saveInseratToList(text) {
   var fillLines = [];
   fillInputs.forEach(function(inp) { fillLines.push(inp.dataset.label + ': ' + inp.value); });
 
+  var datum = new Date().toLocaleDateString('de-DE');
   var inserate = getSavedInserate();
-  inserate.unshift({ id: id, titel: titel, text: text, fillHelp: fillLines.join('\n'), datum: new Date().toLocaleDateString('de-DE') });
+  inserate.unshift({ id: id, titel: titel, text: text, fillHelp: fillLines.join('\n'), datum: datum });
   if (inserate.length > 20) inserate = inserate.slice(0, 20); // max 20
   localStorage.setItem('tp_inserate', JSON.stringify(inserate));
   renderInseratDropdown();
+  syncInseratToSupabase(titel, text, fillLines.join('\n'), datum);
 
   // Automatisch als "Aktiv" ins Board übernehmen
   // Automatically take over into board as "Aktiv"
   addBoardEntryAuto(titel, document.getElementById('priceInput').value);
+}
+
+// ══ ARCHIV-SYNC (Supabase, geräteübergreifend über Browser-ID, gleiches Prinzip wie Board) ══
+function syncInseratToSupabase(titel, text, fillHelp, datum) {
+  if (!CFG.sbUrl || !CFG.sbKey) return;
+  var bid = getBrowserId();
+  fetch(CFG.sbUrl + '/rest/v1/teilepilot_inserate', {
+    method: 'POST',
+    headers: sbHeaders(),
+    body: JSON.stringify({ browser_id: bid, titel: titel, inserat_text: text, fill_help: fillHelp, datum: datum })
+  })
+  .then(function() { trimArchivTable('teilepilot_inserate', bid); })
+  .catch(function() {});
+}
+
+function trimArchivTable(table, bid) {
+  // Server-seitig auf die letzten 20 Einträge pro Browser-ID begrenzen (gleiche Regel wie vorher lokal)
+  fetch(CFG.sbUrl + '/rest/v1/' + table + '?browser_id=eq.' + encodeURIComponent(bid) + '&select=id&order=created_at.desc&offset=20', {
+    headers: sbHeaders()
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(rows) {
+    if (!Array.isArray(rows) || rows.length === 0) return;
+    var ids = rows.map(function(r) { return r.id; }).join(',');
+    fetch(CFG.sbUrl + '/rest/v1/' + table + '?id=in.(' + ids + ')', { method: 'DELETE', headers: sbHeaders() }).catch(function() {});
+  })
+  .catch(function() {});
+}
+
+function getArchivInserate(callback) {
+  var bid = getBrowserId();
+  if (!CFG.sbUrl || !CFG.sbKey) { callback(localInserateAsArchivRows()); return; }
+  fetch(CFG.sbUrl + '/rest/v1/teilepilot_inserate?browser_id=eq.' + encodeURIComponent(bid) + '&order=created_at.desc&limit=20', {
+    headers: sbHeaders()
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (!Array.isArray(data)) throw new Error('unerwartete Antwort');
+    callback(data.map(function(row) {
+      return { id: row.id, titel: row.titel, text: row.inserat_text, fillHelp: row.fill_help, datum: row.datum };
+    }));
+  })
+  .catch(function() { callback(localInserateAsArchivRows()); });
+}
+
+function localInserateAsArchivRows() {
+  return getSavedInserate().map(function(ins) {
+    return { id: ins.id, titel: ins.titel, text: ins.text, fillHelp: ins.fillHelp, datum: ins.datum, local: true };
+  });
+}
+
+function deleteArchivInserat(ins) {
+  var updatedLocal = getSavedInserate().filter(function(x) { return x.id !== ins.id; });
+  localStorage.setItem('tp_inserate', JSON.stringify(updatedLocal));
+  if (CFG.sbUrl && CFG.sbKey && !ins.local) {
+    fetch(CFG.sbUrl + '/rest/v1/teilepilot_inserate?id=eq.' + encodeURIComponent(ins.id), { method: 'DELETE', headers: sbHeaders() }).catch(function() {});
+  }
+  renderArchivList();
+  renderInseratDropdown();
 }
 
 function addBoardEntryAuto(titel, preis) {
@@ -2235,105 +2328,108 @@ function renderArchivList() {
 
   var list = document.getElementById('archivList');
   var empty = document.getElementById('archivEmpty');
-  var inserate = getSavedInserate();
-  list.innerHTML = '';
-
-  if (inserate.length === 0) { empty.style.display = 'block'; empty.textContent = 'Noch keine Anzeigen gespeichert.'; return; }
+  list.innerHTML = '<div style="text-align:center;padding:20px;opacity:.5;font-size:13px">Lädt …</div>';
   empty.style.display = 'none';
 
-  inserate.forEach(function(ins) {
-    var card = document.createElement('div');
-    card.style.cssText = 'background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;margin-bottom:12px';
+  getArchivInserate(function(inserate) {
+    list.innerHTML = '';
 
-    var head = document.createElement('div');
-    head.style.cssText = 'display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px';
-    head.innerHTML = '<div><div style="font-weight:700;font-size:14px">' + ins.titel + '</div><div style="font-size:12px;opacity:.5;margin-top:2px">' + ins.datum + '</div></div>';
+    if (inserate.length === 0) { empty.style.display = 'block'; empty.textContent = 'Noch keine Anzeigen gespeichert.'; return; }
+    empty.style.display = 'none';
 
-    var actions = document.createElement('div');
-    actions.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;flex:0 0 auto';
+    inserate.forEach(function(ins) {
+      var card = document.createElement('div');
+      card.style.cssText = 'background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;margin-bottom:12px';
 
-    var viewBtn = document.createElement('button');
-    viewBtn.className = 'btn btn-ghost';
-    viewBtn.textContent = '👁️';
-    viewBtn.title = 'Anzeigen';
-    viewBtn.style.cssText = 'font-size:12px;padding:6px 10px';
-    viewBtn.onclick = function() { toggleArchivDetail(card, ins); };
+      var head = document.createElement('div');
+      head.style.cssText = 'display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px';
+      head.innerHTML = '<div><div style="font-weight:700;font-size:14px">' + ins.titel + '</div><div style="font-size:12px;opacity:.5;margin-top:2px">' + ins.datum + '</div></div>';
 
-    var pdfBtn = document.createElement('button');
-    pdfBtn.className = 'btn btn-ghost';
-    pdfBtn.textContent = '📄 PDF';
-    pdfBtn.style.cssText = 'font-size:12px;padding:6px 10px';
-    pdfBtn.onclick = function() { exportArchivPdf(ins); };
+      var actions = document.createElement('div');
+      actions.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;flex:0 0 auto';
 
-    var delBtn = document.createElement('button');
-    delBtn.className = 'btn btn-ghost';
-    delBtn.textContent = '🗑️';
-    delBtn.title = 'Löschen';
-    delBtn.style.cssText = 'font-size:12px;padding:6px 10px';
-    delBtn.onclick = function() {
-      if (!confirm('Diese gespeicherte Anzeige wirklich löschen?')) return;
-      var updated = getSavedInserate().filter(function(x) { return x.id !== ins.id; });
-      localStorage.setItem('tp_inserate', JSON.stringify(updated));
-      renderArchivList();
-      renderInseratDropdown();
-    };
+      var viewBtn = document.createElement('button');
+      viewBtn.className = 'btn btn-ghost';
+      viewBtn.textContent = '👁️';
+      viewBtn.title = 'Anzeigen';
+      viewBtn.style.cssText = 'font-size:12px;padding:6px 10px';
+      viewBtn.onclick = function() { toggleArchivDetail(card, ins); };
 
-    actions.appendChild(viewBtn); actions.appendChild(pdfBtn); actions.appendChild(delBtn);
-    head.appendChild(actions);
-    card.appendChild(head);
-    list.appendChild(card);
+      var pdfBtn = document.createElement('button');
+      pdfBtn.className = 'btn btn-ghost';
+      pdfBtn.textContent = '📄 PDF';
+      pdfBtn.style.cssText = 'font-size:12px;padding:6px 10px';
+      pdfBtn.onclick = function() { exportArchivPdf(ins); };
+
+      var delBtn = document.createElement('button');
+      delBtn.className = 'btn btn-ghost';
+      delBtn.textContent = '🗑️';
+      delBtn.title = 'Löschen';
+      delBtn.style.cssText = 'font-size:12px;padding:6px 10px';
+      delBtn.onclick = function() {
+        if (!confirm('Diese gespeicherte Anzeige wirklich löschen?')) return;
+        deleteArchivInserat(ins);
+      };
+
+      actions.appendChild(viewBtn); actions.appendChild(pdfBtn); actions.appendChild(delBtn);
+      head.appendChild(actions);
+      card.appendChild(head);
+      list.appendChild(card);
+    });
   });
 }
 
 function renderMarketCheckArchivList() {
   var list = document.getElementById('archivList');
   var empty = document.getElementById('archivEmpty');
-  var checks = getSavedMarketChecks();
-  list.innerHTML = '';
-
-  if (checks.length === 0) { empty.style.display = 'block'; empty.textContent = 'Noch keine Marktchecks gespeichert.'; return; }
+  list.innerHTML = '<div style="text-align:center;padding:20px;opacity:.5;font-size:13px">Lädt …</div>';
   empty.style.display = 'none';
 
-  checks.forEach(function(mc) {
-    var card = document.createElement('div');
-    card.style.cssText = 'background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;margin-bottom:12px';
+  getArchivMarktchecks(function(checks) {
+    list.innerHTML = '';
 
-    var head = document.createElement('div');
-    head.style.cssText = 'display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px';
-    head.innerHTML = '<div><div style="font-weight:700;font-size:14px">🔍 ' + mc.query + '</div><div style="font-size:12px;opacity:.5;margin-top:2px">' + mc.datum + (mc.candidates && mc.candidates.length ? ' · ' + mc.candidates.length + ' Angebote gemerkt' : '') + '</div></div>';
+    if (checks.length === 0) { empty.style.display = 'block'; empty.textContent = 'Noch keine Marktchecks gespeichert.'; return; }
+    empty.style.display = 'none';
 
-    var actions = document.createElement('div');
-    actions.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;flex:0 0 auto';
+    checks.forEach(function(mc) {
+      var card = document.createElement('div');
+      card.style.cssText = 'background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;margin-bottom:12px';
 
-    var viewBtn = document.createElement('button');
-    viewBtn.className = 'btn btn-ghost';
-    viewBtn.textContent = '👁️';
-    viewBtn.title = 'Anzeigen';
-    viewBtn.style.cssText = 'font-size:12px;padding:6px 10px';
-    viewBtn.onclick = function() { toggleMarketCheckDetail(card, mc); };
+      var head = document.createElement('div');
+      head.style.cssText = 'display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px';
+      head.innerHTML = '<div><div style="font-weight:700;font-size:14px">🔍 ' + mc.query + '</div><div style="font-size:12px;opacity:.5;margin-top:2px">' + mc.datum + (mc.candidates && mc.candidates.length ? ' · ' + mc.candidates.length + ' Angebote gemerkt' : '') + '</div></div>';
 
-    var pdfBtn = document.createElement('button');
-    pdfBtn.className = 'btn btn-ghost';
-    pdfBtn.textContent = '📄 PDF';
-    pdfBtn.style.cssText = 'font-size:12px;padding:6px 10px';
-    pdfBtn.onclick = function() { exportMarketCheckPdf(mc); };
+      var actions = document.createElement('div');
+      actions.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;flex:0 0 auto';
 
-    var delBtn = document.createElement('button');
-    delBtn.className = 'btn btn-ghost';
-    delBtn.textContent = '🗑️';
-    delBtn.title = 'Löschen';
-    delBtn.style.cssText = 'font-size:12px;padding:6px 10px';
-    delBtn.onclick = function() {
-      if (!confirm('Diesen gespeicherten Marktcheck wirklich löschen?')) return;
-      var updated = getSavedMarketChecks().filter(function(x) { return x.id !== mc.id; });
-      localStorage.setItem('tp_market_checks', JSON.stringify(updated));
-      renderArchivList();
-    };
+      var viewBtn = document.createElement('button');
+      viewBtn.className = 'btn btn-ghost';
+      viewBtn.textContent = '👁️';
+      viewBtn.title = 'Anzeigen';
+      viewBtn.style.cssText = 'font-size:12px;padding:6px 10px';
+      viewBtn.onclick = function() { toggleMarketCheckDetail(card, mc); };
 
-    actions.appendChild(viewBtn); actions.appendChild(pdfBtn); actions.appendChild(delBtn);
-    head.appendChild(actions);
-    card.appendChild(head);
-    list.appendChild(card);
+      var pdfBtn = document.createElement('button');
+      pdfBtn.className = 'btn btn-ghost';
+      pdfBtn.textContent = '📄 PDF';
+      pdfBtn.style.cssText = 'font-size:12px;padding:6px 10px';
+      pdfBtn.onclick = function() { exportMarketCheckPdf(mc); };
+
+      var delBtn = document.createElement('button');
+      delBtn.className = 'btn btn-ghost';
+      delBtn.textContent = '🗑️';
+      delBtn.title = 'Löschen';
+      delBtn.style.cssText = 'font-size:12px;padding:6px 10px';
+      delBtn.onclick = function() {
+        if (!confirm('Diesen gespeicherten Marktcheck wirklich löschen?')) return;
+        deleteArchivMarktcheck(mc);
+      };
+
+      actions.appendChild(viewBtn); actions.appendChild(pdfBtn); actions.appendChild(delBtn);
+      head.appendChild(actions);
+      card.appendChild(head);
+      list.appendChild(card);
+    });
   });
 }
 
@@ -2410,10 +2506,55 @@ function getSavedMarketChecks() {
 
 function saveMarketCheckToArchiv(query, text, candidates) {
   var id = 'mc_' + Date.now();
+  var datum = new Date().toLocaleDateString('de-DE');
   var checks = getSavedMarketChecks();
-  checks.unshift({ id: id, query: query, text: text, candidates: candidates || [], datum: new Date().toLocaleDateString('de-DE') });
+  checks.unshift({ id: id, query: query, text: text, candidates: candidates || [], datum: datum });
   if (checks.length > 20) checks = checks.slice(0, 20); // max 20
   localStorage.setItem('tp_market_checks', JSON.stringify(checks));
+  syncMarktcheckToSupabase(query, text, candidates || [], datum);
+}
+
+function syncMarktcheckToSupabase(query, text, candidates, datum) {
+  if (!CFG.sbUrl || !CFG.sbKey) return;
+  var bid = getBrowserId();
+  fetch(CFG.sbUrl + '/rest/v1/teilepilot_marktchecks', {
+    method: 'POST',
+    headers: sbHeaders(),
+    body: JSON.stringify({ browser_id: bid, query: query, analyse_text: text, candidates: candidates, datum: datum })
+  })
+  .then(function() { trimArchivTable('teilepilot_marktchecks', bid); })
+  .catch(function() {});
+}
+
+function getArchivMarktchecks(callback) {
+  var bid = getBrowserId();
+  if (!CFG.sbUrl || !CFG.sbKey) { callback(localMarktchecksAsArchivRows()); return; }
+  fetch(CFG.sbUrl + '/rest/v1/teilepilot_marktchecks?browser_id=eq.' + encodeURIComponent(bid) + '&order=created_at.desc&limit=20', {
+    headers: sbHeaders()
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (!Array.isArray(data)) throw new Error('unerwartete Antwort');
+    callback(data.map(function(row) {
+      return { id: row.id, query: row.query, text: row.analyse_text, candidates: row.candidates || [], datum: row.datum };
+    }));
+  })
+  .catch(function() { callback(localMarktchecksAsArchivRows()); });
+}
+
+function localMarktchecksAsArchivRows() {
+  return getSavedMarketChecks().map(function(mc) {
+    return { id: mc.id, query: mc.query, text: mc.text, candidates: mc.candidates, datum: mc.datum, local: true };
+  });
+}
+
+function deleteArchivMarktcheck(mc) {
+  var updatedLocal = getSavedMarketChecks().filter(function(x) { return x.id !== mc.id; });
+  localStorage.setItem('tp_market_checks', JSON.stringify(updatedLocal));
+  if (CFG.sbUrl && CFG.sbKey && !mc.local) {
+    fetch(CFG.sbUrl + '/rest/v1/teilepilot_marktchecks?id=eq.' + encodeURIComponent(mc.id), { method: 'DELETE', headers: sbHeaders() }).catch(function() {});
+  }
+  renderArchivList();
 }
 
 function exportMarketCheckPdf(mc) {
@@ -2953,6 +3094,7 @@ loadConfig();
 loadRules();
 initCredits();
 checkStripeSuccess();
+document.getElementById('recoveryCodeDisplay').value = getBrowserId();
 document.getElementById('finalActions').style.display = 'none';
 document.getElementById('marketCheckBox').style.display = 'none';
 document.getElementById('inseratResult').classList.remove('show');
